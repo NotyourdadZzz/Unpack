@@ -50,6 +50,14 @@
 
 
 
+## BrownDustII
+
+1. `FetachCatalog.py`：执行后自动获取最新版本号，然后自动下载catalog
+2. `GenURLs.py`：需要手动修改VERSION为最新的版本号，然后输入参数catalog.json，执行后会生成一个含有spine文件包以及预览图的URL文本。默认过滤出这两个部分，可以修改过滤参数。
+3. 
+
+
+
 ## CherryTale
 
 用下载器下载的资源会自动解密。
