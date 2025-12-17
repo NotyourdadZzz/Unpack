@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import httpx
 import blackboxprotobuf as bbpb
 
@@ -38,14 +39,18 @@ version = version_bytes.decode('utf-8') if isinstance(version_bytes, bytes) else
 
 print(f"获取到的版本号: {version}")
 
+# 构建安全的版本字符串用于文件名（把不安全字符替换为下划线）
+safe_version = re.sub(r'[^A-Za-z0-9._-]+', '_', version)
+
 # 获取 catalog
 catalog_url = f'{CDN_BASE_URL}/StandaloneWindows64/HD/{version}/catalog_alpha.json'
 print(f"请求 catalog URL: {catalog_url}")
 
 catalog = httpx.get(catalog_url).json()
 
-# 保存 catalog
-with open('catalog.json', 'w', encoding='utf-8') as f:
+# 保存 catalog 到 catalog-<version>.json
+filename = f'catalog-{safe_version}.json'
+with open(filename, 'w', encoding='utf-8') as f:
     json.dump(catalog, f, ensure_ascii=False)
 
-print("成功保存 catalog.json")
+print(f"成功保存 {filename}")
