@@ -3,7 +3,7 @@ import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-tapbody_keys = ["mail", "touch_body", "touch_drag"]
+tapbody_keys = ["mail", "touch_body", "touch_drag","main"]
 tapspecial_keys = ["complete", "home", "login", "mission", "mission_complete"] # 新增特殊动作键
 taphead_keys = ["wedding", "touch_head", "touch_idle"]
 
