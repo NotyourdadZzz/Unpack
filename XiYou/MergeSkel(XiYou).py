@@ -43,9 +43,9 @@ def skel_merge(info_dir, bundles_dir, output_root):
 
 if __name__ == '__main__':
     # ================= 配置区域 =================
-    INFO_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\XiYou BiHuiXiXing\Spine\assets\objects\spine\hero_live"
-    BUNDLES_DIR = r"C:\Users\86182\Downloads\bundles"
-    OUTPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\XiYou BiHuiXiXing\Spine\assets\objects\spine\hero_live"
+    INFO_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\assets\objects\spine\hero_live"
+    BUNDLES_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\bundles (1)"
+    OUTPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\XiYou BiHuiXiXing\Spine\output"
     # ============================================
 
     skel_merge(INFO_DIR, BUNDLES_DIR, OUTPUT_DIR)
