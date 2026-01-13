@@ -6,8 +6,9 @@ from PIL import Image  #Pillow
 from texture2ddecoder import decode_etc2a8
 from concurrent.futures import ProcessPoolExecutor
 import functools
-
-
+#Tips for me: 
+# conda activate py311
+# 比起直接调用TexturePacker 效率高很多而且不要配置相应的环境变量
 def decompress_ccz(data: bytes) -> bytes:
     return zlib.decompress(data[16:])
 
@@ -91,5 +92,5 @@ def convert_dir(root: str):
 
 
 if __name__ == '__main__':
-    TARGET_PATH = r'C:\Users\86182\Downloads\' 
+    TARGET_PATH = r'C:\Users\86182\Documents\MuMu共享文件夹\Download' 
     convert_dir(TARGET_PATH)

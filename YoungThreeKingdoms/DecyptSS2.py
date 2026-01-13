@@ -82,7 +82,7 @@ def batch(png_path: str = '', ext: str = '*.png', subfolder: bool = False):
 
 if __name__ == '__main__':
     # --- 运行配置 ---
-    TARGET_PATH = r'C:\Users\86182\Downloads\ss2' 
+    TARGET_PATH = r'C:\Users\86182\Documents\MuMu共享文件夹\Download' 
     FILE_EXT = '*.png'
     SEARCH_SUB = True
     

@@ -1,6 +1,6 @@
 from pathlib import Path
 import subprocess
-
+# 直接调用了TexturePacker的命令行工具，不稳定（容易出现许可证水印），且效率很低下，不建议使用。
 def convert_and_cleanup(base_dir):
     base_path = Path(base_dir)
     tp_exe = "TexturePacker"
