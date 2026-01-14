@@ -1,0 +1,10 @@
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/0_5.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/5_10.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/10_15.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/15_20.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/20_25.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/25_30.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/30_35.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/35_40.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/40_45.patch
+https://xonecn-hotupdatecdn.shziyi.com/release-cn/android/tags/major/2.3/patches/45_48.patch
