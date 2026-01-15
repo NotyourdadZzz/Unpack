@@ -40,7 +40,7 @@ def process_file(in_path, out_path, key_bytes, encrypt=False):
     else:
         # 解密
         if len(data) % block_size != 0:
-            raise ValueError(f"加密数据长度必须为 {block_size} 的倍数")
+            raise ValueError(f"数据长度必须为 {block_size} 的倍数")
         
         # 分块解密
         decrypted = bytearray()
@@ -60,8 +60,8 @@ if __name__ == "__main__":
     key = b"D(G+KbPeShVmYq3t"
     
     process_file(
-        r"C:\Users\86182\Documents\MuMu共享文件夹\Download\PTN\base\res_base_classify.json",
-        r"output3.json",
+        r"res_audio_classify.json",
+        r"audio.json",
         key,
         encrypt=False
     )
