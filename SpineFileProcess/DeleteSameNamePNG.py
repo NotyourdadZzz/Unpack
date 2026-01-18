@@ -1,6 +1,6 @@
 import os
 import re
-
+# 搜索指定目录下的同名（无视大小写）png 只保留size最大的那个
 ROOT_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\Previews - 1"  # 修改为目标目录
 
 pattern = re.compile(r"^(.*?)(?:\s*#\d+)?\.png$", re.IGNORECASE)

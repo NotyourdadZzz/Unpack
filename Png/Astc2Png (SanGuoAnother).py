@@ -7,8 +7,8 @@ import re
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17
 
-INPUT_DIR  = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\src")
-OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\output")
+INPUT_DIR  = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\native")
+OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\decompress")
 ASTCENC    = r"astcenc.exe"
 MODE       = "l"
 
