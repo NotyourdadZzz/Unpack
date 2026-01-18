@@ -3,22 +3,21 @@ import os
 import shutil
 from pathlib import Path
 from typing import Dict, Tuple, Optional
+import re
 
 # ================== 配置 ==================
 DRY_RUN = False
 
-CACHE_LIST_PATH = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\cacheList.json")
-CONFIG_PATH_MAIN = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\configAPK.json")
-CONFIG_PATH_BACK = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\configCommon.json")
+CACHE_LIST_PATH = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\cacheList.json")
+CONFIG_PATH_MAIN = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\configCommon.json")
+CONFIG_PATH_BACK = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\configAPK.json")
 
-INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\RawRes")
-OUTPUT_ROOT = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SortedRes")
-ERROR_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\ERROR")
+INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\Res")
+OUTPUT_ROOT = INPUT_DIR.parent.joinpath("SortedRes")
+ERROR_DIR = INPUT_DIR.parent.joinpath("ERRORRes")
 
 BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 
-FAIL_NO_CACHE = "no_cache"
-FAIL_NO_PATH = "no_path"
 if not DRY_RUN and not OUTPUT_ROOT.exists(): 
     os.makedirs(OUTPUT_ROOT) 
 if not DRY_RUN and not ERROR_DIR.exists(): 
@@ -26,10 +25,17 @@ if not DRY_RUN and not ERROR_DIR.exists():
 
 # ================== 统计 ==================
 success = []
-fail_no_cache = []
-fail_no_path = []
+fail = 0
 
 # ================== UUID 压缩 ==================
+
+UUID36_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-"
+    r"[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{12}$"
+)
 def compress_uuid(full_uuid: str) -> str:
     """
     36 位 UUID → 22 位 uuid22
@@ -38,7 +44,7 @@ def compress_uuid(full_uuid: str) -> str:
     # uuid = full_uuid.split("@", 1)[0]
     uuid = full_uuid
 
-    if len(uuid) != 36:
+    if not UUID36_RE.match(uuid):
         return uuid
 
     clean = uuid.replace("-", "")
@@ -59,6 +65,13 @@ def extract_uuid_from_stem(stem: str) -> str:
       uuid.version
     """
     return stem.split(".", 1)[0]
+
+# ================== 数字名判断 ==================
+def is_numeric_name(name: str) -> bool:
+    """
+    判断是否为纯数字名 (如: 176871675233414)
+    """
+    return name.isdigit()
 
 # ================== cacheList.json 映射 ==================
 def build_url_to_uuid(cache_path: Path) -> Dict[str, str]:
@@ -111,82 +124,63 @@ def classify_file(
     src: Path,
     url_to_uuid: Dict[str, str],
     uuid22_to_path: Dict[str, str]
-) -> Tuple[Optional[str], Optional[str]]:
-    """
-    返回:
-      (None, path)        -> 成功
-      (FAIL_NO_CACHE, None)
-      (FAIL_NO_PATH, uuid22)
-    """
+) -> Tuple[bool, str]:
+    """分析文件名并查找路径，返回 (success, result)"""
     name = extract_uuid_from_stem(src.stem)
-
-    # step 1: filename / url → uuid
-    if len(name) == 36 or len(name) == 9:
-        uuid = name
-    else:
+    
+    # 获取 uuid
+    if is_numeric_name(name):
         uuid = url_to_uuid.get(name)
-
-    if not uuid:
-        return FAIL_NO_CACHE, None
-
-    # step 2: uuid → uuid22
+        if not uuid:
+            return False, ""
+    else:
+        uuid = name
+    
+    # 转换为 uuid22 并查找路径
     uuid22 = compress_uuid(uuid)
-
-    # step 3: uuid22 → path
     path = uuid22_to_path.get(uuid22)
-    if not path:
-        return FAIL_NO_PATH, uuid22
+    
+    return (True, path) if path else (False, "")
 
-    return None, path
-
-# ================== 主流程 ==================
 print(f"模式: {'[DRY RUN]' if DRY_RUN else '[EXECUTE]'}")
 print("加载映射表...")
 
 url_to_uuid = build_url_to_uuid(CACHE_LIST_PATH)
-
-uuid22_to_path = {}
-uuid22_to_path.update(build_uuid22_to_path(CONFIG_PATH_BACK))
+uuid22_to_path = build_uuid22_to_path(CONFIG_PATH_BACK)
 uuid22_to_path.update(build_uuid22_to_path(CONFIG_PATH_MAIN))
 
-print(f"url → uuid: {len(url_to_uuid)}")
-print(f"uuid22 → path: {len(uuid22_to_path)}")
-print(f"处理目录: {INPUT_DIR}\n")
+print(f"url → uuid: {len(url_to_uuid)} | uuid22 → path: {len(uuid22_to_path)}")
+print(f"处理: {INPUT_DIR}\n")
 
 for src in INPUT_DIR.rglob("*"):
     if not src.is_file():
         continue
 
-    reason, result = classify_file(src, url_to_uuid, uuid22_to_path)
+    is_ok, result = classify_file(src, url_to_uuid, uuid22_to_path)
 
-    if reason == FAIL_NO_CACHE:
-        fail_no_cache.append(src.name)
-        if not DRY_RUN:
-            shutil.move(src, ERROR_DIR / src.name)
-            continue
-
-    if reason == FAIL_NO_PATH:
-        fail_no_path.append((src.name, result))
+    # 处理失败情况
+    if not is_ok:
+        fail += 1
         if not DRY_RUN:
             shutil.move(src, ERROR_DIR / src.name)
         continue
     
-    dest = OUTPUT_ROOT / (result + src.suffix)
-
-    # 模拟分类
+    # 处理成功情况
+    suffix = ".skel" if src.suffix == ".bin" else src.suffix
+    dest = OUTPUT_ROOT / (result + suffix)
+    
     if DRY_RUN:
-        success.append((src.name, str(dest)))
-        continue
-    # 真实移动
-    try:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(src, dest)
         success.append((src.name, str(dest.relative_to(OUTPUT_ROOT))))
-    except Exception as e:
-        print(f"[Error] Copy failed: {src} -> {e}")
+    else:
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(src, dest)
+            success.append((src.name, str(dest.relative_to(OUTPUT_ROOT))))
+        except Exception as e:
+            fail += 1
+            print(f"[Error] {src.name}: {e}")
 
 # ================== 结果输出 ==================
 print("\n========== 处理完成 ==========")
 print(f"[OK] 成功: {len(success)}")
-print(f"[FAIL] cacheList 无记录: {len(fail_no_cache)}")
-print(f"[FAIL] config 无路径: {len(fail_no_path)}")
+print(f"[FAIL] 失败: {fail}")

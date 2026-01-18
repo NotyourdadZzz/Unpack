@@ -3,31 +3,33 @@ from pathlib import Path
 import shutil
 import subprocess
 import gzip, io, zlib
-import re
-# 递归搜索指定目录下的 astc atlas bin文件 对astc进行解压Gzip-解密beeplay 输出到指定目录下 输出为png
-# atlas原封不动 bin改拓展名为skel 
+# 需要下载 astcenc 配置环境变量
+# 递归处理目录：
+# astc: 解 gzip / ccz → beeplay → astcenc → png（原地）
 
 # ===== 固定参数 =====
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17
-#输入输出路径填相同的可以直接替换文件 不用拷贝
-INPUT_DIR  = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SortedRes")
-OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SortedRes")
 
-ASTCENC    = r"astcenc.exe"
-MODE       = "l"
+INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\SortedRes\spines\panel\nvzhu_pifu2")
 
+ASTCENC   = r"astcenc.exe"
+MODE      = "l"
 # ====================
+
 
 def is_gzip(data: bytes) -> bool:
     return data.startswith(b"\x1f\x8b")
 
+
 def is_ccz(data: bytes) -> bool:
     return data.startswith(b"CCZ!")
+
 
 def inflate_gzip(data: bytes) -> bytes:
     with gzip.GzipFile(fileobj=io.BytesIO(data)) as f:
         return f.read()
+
 
 def inflate_ccz(data: bytes) -> bytes:
     return zlib.decompress(data[16:])
@@ -40,54 +42,48 @@ def decrypt_beeplay(data: bytes) -> bytes:
     for i in range(len(buf)):
         buf[i] ^= XOR_KEY
     return bytes(buf)
-    
 
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# ==================== 主流程 ====================
 for src in INPUT_DIR.rglob("*"):
     if not src.is_file():
         continue
 
     suffix = src.suffix.lower()
 
-    if suffix == ".atlas":
-        dst = OUTPUT_DIR / src.name
-        shutil.copy2(src, dst)
+    # -------- 只处理 astc --------
+    if suffix != ".astc":
         continue
-
-    if suffix == ".bin":
-        dst = OUTPUT_DIR / f"{src.stem}.skel"
-        shutil.copy2(src, dst)
-        continue
-
-    if src.suffix.lower() != ".astc":
-        continue
-
-    data = src.read_bytes()
-
-    # === 1. 解压 ===
-    if is_ccz(data):
-        data = inflate_ccz(data)
-    elif is_gzip(data):
-        data = inflate_gzip(data)
-
-    # === 2. 解密 ===
-    data = decrypt_beeplay(data)
-
-    astc_path = OUTPUT_DIR / (src.stem + ".astc")
-    png_path  = OUTPUT_DIR / (src.stem + ".png")
-
-    astc_path.write_bytes(data)
 
     try:
+        data = src.read_bytes()
+
+        # 1️⃣ 解压
+        if is_ccz(data):
+            data = inflate_ccz(data)
+        elif is_gzip(data):
+            data = inflate_gzip(data)
+
+        # 2️⃣ 解密 beeplay
+        data = decrypt_beeplay(data)
+
+        # 临时 astc（覆盖原文件）
+        src.write_bytes(data)
+
+        png_path = src.with_suffix(".png")
+
+        # 3️⃣ astc → png
         subprocess.run(
-            [ASTCENC, f"-d{MODE}", str(astc_path), str(png_path)],
-            check=True
+            [ASTCENC, f"-d{MODE}", str(src), str(png_path)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
-        print("OK  :", src.name)
 
-        # 成功后删除 ASTC
-        astc_path.unlink(missing_ok=True)
+        # 4️⃣ 成功后删除 astc
+        src.unlink(missing_ok=True)
 
-    except subprocess.CalledProcessError:
-        print("FAIL:", src.name)
+        print("OK   :", png_path.name)
+
+    except Exception as e:
+        print("FAIL :", src.name, "->", e)
