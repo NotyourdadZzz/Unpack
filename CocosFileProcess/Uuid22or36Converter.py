@@ -57,7 +57,6 @@ def Compress(full_uuid):
 
     compressed = "".join(res)
     
-    # 如果原输入有后缀，需要拼回去 (原代码试图做替换但逻辑有误，这里直接返回压缩结果或拼接)
     return compressed if len(parts) == 1 else f"{compressed}@{parts[1]}"
 
 if __name__ == '__main__':
@@ -66,5 +65,5 @@ if __name__ == '__main__':
     print(f"解压结果: {Decompress(b64)}")
 
     # 压缩
-    uid = "000217b7-8d94-4fd2-992a-a2f6104c236b"
+    uid = "4e4a3e30-eb8f-4aec-886d-e34c458cc501"
     print(f"压缩结果: {Compress(uid)}")

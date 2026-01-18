@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import shutil
 import subprocess
 import gzip, io, zlib
 import re
+# 递归搜索指定目录下的 astc atlas bin文件 对astc进行解压Gzip-解密beeplay 输出到指定目录下 输出为png
+# atlas原封不动 bin改拓展名为skel 
+
 # ===== 固定参数 =====
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17
+#输入输出路径填相同的可以直接替换文件 不用拷贝
+INPUT_DIR  = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SortedRes")
+OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SortedRes")
 
-INPUT_DIR  = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\native")
-OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\decompress")
 ASTCENC    = r"astcenc.exe"
 MODE       = "l"
 
@@ -42,6 +47,19 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 for src in INPUT_DIR.rglob("*"):
     if not src.is_file():
         continue
+
+    suffix = src.suffix.lower()
+
+    if suffix == ".atlas":
+        dst = OUTPUT_DIR / src.name
+        shutil.copy2(src, dst)
+        continue
+
+    if suffix == ".bin":
+        dst = OUTPUT_DIR / f"{src.stem}.skel"
+        shutil.copy2(src, dst)
+        continue
+
     if src.suffix.lower() != ".astc":
         continue
 
