@@ -16,7 +16,6 @@ INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\temp\Re
 OUTPUT_ROOT = INPUT_DIR.parent.joinpath("SortedRes")
 ERROR_DIR = INPUT_DIR.parent.joinpath("ERRORRes")
 
-BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 
 if not DRY_RUN and not OUTPUT_ROOT.exists(): 
     os.makedirs(OUTPUT_ROOT) 
@@ -28,6 +27,7 @@ success = []
 fail = 0
 
 # ================== UUID 压缩 ==================
+BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 
 UUID36_RE = re.compile(
     r"^[0-9a-fA-F]{8}-"
