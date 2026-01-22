@@ -1,0 +1,1 @@
+name	version	size	sizeB	isEncrypt	path	FileMD5	FileSize	downloadPriority

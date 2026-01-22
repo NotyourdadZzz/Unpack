@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 # ---------- 配置 ----------
-CONFIG_PATH = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\config.json")      # config.json 路径
-INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\dec")               # 待分类文件根目录
-OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\sort")             # 输出目录
+CONFIG_PATH = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources\config.json")      # config.json 路径
+INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources\native")               # 待分类文件根目录
+OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources")             # 输出目录
 # --------------------------
 
 
@@ -68,6 +68,7 @@ not_found_files = []
 for root, dirs, files in os.walk(INPUT_DIR):
     for file in files:
         name, ext = os.path.splitext(file)
+        ext = ext.lower()
 
         if len(name) == 36:
             uuid22 = compress_uuid(name)
@@ -84,6 +85,10 @@ for root, dirs, files in os.walk(INPUT_DIR):
         target_dir.mkdir(parents=True, exist_ok=True)
 
         src_file = Path(root) / file
+
+        if ext == ".bin":
+            ext = ".skel"
+
         dst_file = target_dir / f"{logical_name}{ext}"
 
         # shutil.copy2(src_file, dst_file)  # 保留原文件
