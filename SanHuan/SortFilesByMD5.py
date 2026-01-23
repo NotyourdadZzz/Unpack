@@ -7,30 +7,27 @@ import hashlib
 import shutil
 
 # ================== 常量配置 ==================
-INPUT_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\Res\TEST"            # 输入目录（待归类文件所在目录）
-OUTPUT_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\SortedRes"          # 输出目录（按路径还原）
-UNCLASSIFIED_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\ERRORRes"  # 未分类目录
-CONFIG_JSON = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\config.json"    # manifest / config 文件
+INPUT_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\Res"
+OUTPUT_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\SortedRes"
+UNCLASSIFIED_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\ERRORRes"
+CONFIG_JSON = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\SanHuan\config.json"
+
+DRY_RUN = False
+PRINT_EVERY = 1000   # 每处理多少个文件打印一次进度
 # ============================================
 
 
 def md5_str(s: str) -> str:
-    """计算字符串 MD5（小写 hex）"""
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
 
 def load_md5_path_map(config_path: str) -> dict:
-    """
-    从 config.json 构建：
-    MD5(path) -> 原始路径
-    """
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
     table = {}
     for path in cfg.keys():
-        h = md5_str(path)
-        table[h] = path
+        table[md5_str(path)] = path
     return table
 
 
@@ -38,22 +35,44 @@ def ensure_parent(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
+def count_files(base: str) -> int:
+    total = 0
+    for _, _, files in os.walk(base):
+        total += len(files)
+    return total
+
+
 def classify_files(md5_map: dict):
+    total = count_files(INPUT_DIR)
+    processed = 0
+    hit = 0
+    miss = 0
+
+    print(f"[+] Total files: {total}")
+
     for root, _, files in os.walk(INPUT_DIR):
         for name in files:
+            processed += 1
             src = os.path.join(root, name)
-
-            # 文件名即 MD5
             key = name.lower()
 
             if key in md5_map:
-                rel_path = md5_map[key]
-                dst = os.path.join(OUTPUT_DIR, rel_path)
+                dst = os.path.join(OUTPUT_DIR, md5_map[key])
+                hit += 1
             else:
                 dst = os.path.join(UNCLASSIFIED_DIR, name)
+                miss += 1
 
-            ensure_parent(dst)
-            shutil.move(src, dst)
+            if not DRY_RUN:
+                ensure_parent(dst)
+                shutil.move(src, dst)
+
+            if processed % PRINT_EVERY == 0 or processed == total:
+                percent = processed * 100 / total
+                print(f"[{percent:6.2f}%] {processed}/{total}  hit={hit}  miss={miss}")
+
+    print("[OK] Done")
+    print(f"[OK] hit={hit}, miss={miss}")
 
 
 def main():
@@ -61,6 +80,8 @@ def main():
     os.makedirs(UNCLASSIFIED_DIR, exist_ok=True)
 
     md5_map = load_md5_path_map(CONFIG_JSON)
+    print(f"[+] MD5 index loaded: {len(md5_map)} entries")
+
     classify_files(md5_map)
 
 
