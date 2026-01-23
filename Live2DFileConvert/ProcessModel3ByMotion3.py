@@ -3,11 +3,13 @@ import json
 import glob
 from pathlib import Path
 
+INPUT_DIR = r"C:\Users\86182\Downloads\sssj\Live2DOutput\assets\_game\assetbundle\live2d"
+
 def main():
     print("开始查找 Live2D 模型...")
 
     # 使用 Path 更简洁地遍历所有 .moc3 文件
-    moc3_files = list(Path('.').rglob('*.moc3'))
+    moc3_files = list(Path(INPUT_DIR).rglob('*.moc3'))
     if not moc3_files:
         print("未找到任何 .moc3 文件")
         return
