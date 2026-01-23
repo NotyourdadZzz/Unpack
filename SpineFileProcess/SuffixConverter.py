@@ -1,5 +1,9 @@
 import os
 
+TARGET_PATH = r'C:\Users\86182\Downloads\sssj\assets\_game\assetbundle\2d animation'
+SRC_EXT = '.asset'
+DST_EXT = '.json'
+
 def convert_extension(
     root_dir: str,
     src_ext: str,
@@ -35,11 +39,7 @@ def convert_extension(
 
 
 if __name__ == "__main__":
-    TARGET_PATH = r'D:\Games\GameUnpackAssets\mymodel\Spine\KaijuPrincess (GuaiShouGongZhu)\Pride\spine2'
-    SRC_EXT = '.txt'
-    DST_EXT = '.json'
     SEARCH_SUB = True
-
     convert_extension(
         TARGET_PATH,
         SRC_EXT,

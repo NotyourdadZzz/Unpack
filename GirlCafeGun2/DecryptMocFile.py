@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # ========= 配置 =========
-INPUT_DIR = r"C:\Users\86182\Downloads\sssj\Live2DOutput\assets\_game\assetbundle\live2d\girl02"   # ← 修改为你的目录
+INPUT_DIR = r"C:\Users\86182\Downloads\sssj\Live2DOutput\assets\_game\assetbundle\live2d"   # ← 修改为你的目录
 EXT = ".moc3"
 # ========================
 
