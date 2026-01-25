@@ -1,7 +1,7 @@
 import os
 
-TARGET_PATH = r'C:\Users\86182\Downloads\sssj\assets\_game\assetbundle\2d animation'
-SRC_EXT = '.asset'
+TARGET_PATH = r'D:\Games\GameUnpackAssets\mymodel\Spine\GirlCafeGun2 (ShuangShengShiJie)\2d animation'
+SRC_EXT = '.prefab'
 DST_EXT = '.json'
 
 def convert_extension(

@@ -3,7 +3,9 @@ import json
 import glob
 from pathlib import Path
 
-INPUT_DIR = r"C:\Users\86182\Downloads\sssj\Live2DOutput\assets\_game\assetbundle\live2d"
+# 自动根据现有motions textures physics重构/生成 model3配置
+
+INPUT_DIR = r"C:\Users\86182\Downloads\Telegram Desktop\Live2DOutput"
 
 def main():
     print("开始查找 Live2D 模型...")
@@ -82,8 +84,8 @@ def main():
                 "Name": model_name,
                 "FileReferences": {
                     "Moc": f"{model_name}.moc3",
-                    "Textures": textures,
-                    "Physics": physics,
+                    "Textures": [],
+                    "Physics": None,
                     "Pose": None,
                     "DisplayInfo": None,
                     "Motions": {},
@@ -95,10 +97,13 @@ def main():
                 ]
             }
 
-        # 强制更新 Motions（保留其他自定义内容）
-        data.setdefault("FileReferences", {})["Motions"] = motions_data
+        file_refs = data.setdefault("FileReferences", {})
+        file_refs["Textures"] = textures
+        if physics:
+            file_refs["Physics"] = physics
+        file_refs["Motions"] = motions_data
 
-        # 6. 写回文件（美化 JSON）
+        # 6. 写回
         try:
             with open(model_json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
