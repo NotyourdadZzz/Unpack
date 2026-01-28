@@ -1,14 +1,32 @@
 import os
 from PIL import Image
 
-def merge_alpha_images(root):
-    for dirpath, dirnames, filenames in os.walk(root):
-        # 只处理以 _alpha.png 结尾的文件
-        alpha_files = [f for f in filenames if f.endswith("_alpha.png")]
+# ===== 常量配置 =====
+TARGET_DIR = r"C:\Users\86182\Documents\MuMu共享文件夹\Download\new\assets\_wizardresources2\resources\jpn"          # 目标目录，改成你的路径
+ALPHA_SUFFIXES = [
+    "_alpha.png",
+    "_A.png",
+    "_a.png"
+]
 
-        for alpha_name in alpha_files:
-            base_name = alpha_name.replace("_alpha.png", ".png")
-            alpha_path = os.path.join(dirpath, alpha_name)
+# ===================
+
+def merge_alpha_images(root):
+    for dirpath, _, filenames in os.walk(root):
+
+        for filename in filenames:
+            # 判断是否是 alpha 通道图
+            matched_suffix = None
+            for suffix in ALPHA_SUFFIXES:
+                if filename.endswith(suffix):
+                    matched_suffix = suffix
+                    break
+
+            if not matched_suffix:
+                continue
+
+            alpha_path = os.path.join(dirpath, filename)
+            base_name = filename.replace(matched_suffix, ".png")
             base_path = os.path.join(dirpath, base_name)
 
             if not os.path.exists(base_path):
@@ -23,7 +41,6 @@ def merge_alpha_images(root):
                     print(f"尺寸不一致，跳过: {base_path}")
                     continue
 
-                # 使用 alpha 替换原图的透明度通道
                 r, g, b, _ = base_img.split()
                 merged = Image.merge("RGBA", (r, g, b, alpha_img))
 
@@ -37,4 +54,4 @@ def merge_alpha_images(root):
                 print(f"失败: {alpha_path} -> {e}")
 
 # 调用
-merge_alpha_images(os.getcwd())
+merge_alpha_images(TARGET_DIR)

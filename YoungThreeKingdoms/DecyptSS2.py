@@ -3,6 +3,11 @@ from zlib import decompress as zlib
 from numpy import arange, frombuffer as npbuff, uint8
 import time
 
+# --- 运行配置 ---
+TARGET_PATH = r'C:\Users\86182\Documents\MuMu共享文件夹\Download' 
+FILE_EXT = '*.png'
+SEARCH_SUB = True
+
 class Young_Three_Kingdoms_2:
     #Young_Three_Kingdoms_1 key `\x11\x2b\x65\xf3\x17\x0c\x0d\x13\x15\x35\x62\x6f\x7b\x62\x15\xe7\x11\x2c\x63\x17\x16\x57\x0c\x59\xb2\x20\x65\x21\x20\x63\x0c\x7f\x08`
     KEY = npbuff(b'\x11\x2b\x65\x78\x17\x0c\x0d\x13\x15\x35\x62\x6f\x7b\x62\x15\x7f\x11\x2c\x63\x17\x16\x57\x0c\x59\x0b\x20\x65\x21\x20\x63\x0c\x7f\x08', dtype=uint8)
@@ -81,9 +86,4 @@ def batch(png_path: str = '', ext: str = '*.png', subfolder: bool = False):
     print(f"成功: {success_count} | 跳过(非加密): {skip_count} | 失败: {error_count}")
 
 if __name__ == '__main__':
-    # --- 运行配置 ---
-    TARGET_PATH = r'C:\Users\86182\Documents\MuMu共享文件夹\Download' 
-    FILE_EXT = '*.png'
-    SEARCH_SUB = True
-    
     batch(TARGET_PATH, FILE_EXT, SEARCH_SUB)

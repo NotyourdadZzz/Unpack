@@ -1,6 +1,6 @@
 import os
 
-TARGET_PATH = r'D:\Games\GameUnpackAssets\mymodel\Spine\GirlCafeGun2 (ShuangShengShiJie)\2d animation'
+TARGET_PATH = r'C:\Users\86182\Documents\MuMu共享文件夹\Download\new\assets\_wizardresources2\resources\jpn'
 SRC_EXT = '.prefab'
 DST_EXT = '.json'
 
