@@ -71,14 +71,14 @@ def process_mix(mix_path: Path):
     out_dir = mix_path.with_suffix("")
     out_dir.mkdir(exist_ok=True)
 
-    # 1️⃣ 解 atlas / json / txt
+    # 解 atlas / json / txt
     extract_by_7z(mix_path, out_dir)
 
-    # 2️⃣ 读 txt
+    # 读 txt
     txt_files = list(out_dir.glob("*.txt"))
     names = read_names(txt_files[0]) if txt_files else []
 
-    # 3️⃣ 扫描 WEBP
+    # 扫描 WEBP
     data = mix_path.read_bytes()
     images = extract_images(data)
 
@@ -89,11 +89,11 @@ def process_mix(mix_path: Path):
             name = f"image_{i:04d}"
         (out_dir / f"{name}.{ext}").write_bytes(blob)
 
-    # 4️⃣ 删除 txt
+    # 删除 txt
     for txt in txt_files:
         txt.unlink(missing_ok=True)
 
-    # 5️⃣ 完整性判断
+    # 完整性判断
     has_atlas = bool(list(out_dir.glob("*.atlas")))
     has_json  = bool(list(out_dir.glob("*.json")))
     has_image = len(images) > 0
