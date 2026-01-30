@@ -2,7 +2,7 @@
 from pathlib import Path
 
 # ================= 配置 =================
-ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\Red PrideOfEden (YiDianDeHuanXiang)\Spine\CardSpine"
+ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\Deep (GuiLongChao)\spine"
 
 ATLAS_EXT = ".atlas"
 PNG_EXT   = ".png"
