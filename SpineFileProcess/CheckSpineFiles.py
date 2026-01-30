@@ -2,11 +2,11 @@
 from pathlib import Path
 
 # ================= 配置 =================
-ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\Deep (GuiLongChao)\spine"
+ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\AoQiChuanShuo\output"
 
 ATLAS_EXT = ".atlas"
-PNG_EXT   = ".png"
 SKEL_EXTS = {".skel", ".json"}   # 骨骼文件
+IMAGE_EXTS = {".png", ".webp", ".jpg", ".jpeg"}  # 支持的图片格式
 # =======================================
 
 # ===== ANSI 颜色 =====
@@ -24,25 +24,28 @@ def warn(msg: str):
 def info(msg: str):
     print(f"{BLUE}[INFO ]{RESET} {msg}")
 
-def parse_atlas_pngs(atlas_path: Path) -> set[str]:
-    pngs = set()
+def parse_atlas_images(atlas_path: Path) -> set[str]:
+    imgs = set()
     try:
         with atlas_path.open("r", encoding="utf-8", errors="ignore") as f:
             for line in f:
                 line = line.strip()
-                if line.lower().endswith(PNG_EXT):
-                    pngs.add(line)
+                low = line.lower()
+                for ext in IMAGE_EXTS:
+                    if low.endswith(ext):
+                        imgs.add(line)
+                        break
     except Exception as e:
         warn(f"读取 atlas 失败: {atlas_path} ({e})")
-    return pngs
+    return imgs
 
 def check_spine_dir(dirpath: Path) -> dict:
     res = {
         "atlas": [],
         "skeleton": [],
-        "png": [],
-        "missing_png": set(),
-        "unused_png": set(),
+        "images": [],
+        "missing_img": set(),
+        "unused_img": set(),
     }
 
     for f in dirpath.iterdir():
@@ -54,19 +57,19 @@ def check_spine_dir(dirpath: Path) -> dict:
             res["atlas"].append(f)
         elif ext in SKEL_EXTS:
             res["skeleton"].append(f)
-        elif ext == PNG_EXT:
-            res["png"].append(f.name)
+        elif ext in IMAGE_EXTS:
+            res["images"].append(f.name)
 
     if not res["atlas"]:
         return res
 
     referenced = set()
     for atlas in res["atlas"]:
-        referenced |= parse_atlas_pngs(atlas)
+        referenced |= parse_atlas_images(atlas)
 
-    existing = set(res["png"])
-    res["missing_png"] = referenced - existing
-    res["unused_png"]  = existing - referenced
+    existing = set(res["images"])
+    res["missing_img"] = referenced - existing
+    res["unused_img"]  = existing - referenced
     return res
 
 def main():
@@ -94,19 +97,19 @@ def main():
             error(f"{sub.name}: 缺少骨骼文件（.skel 或 .json）")
             has_error = True
 
-        if not r["png"]:
-            error(f"{sub.name}: 缺少 png")
+        if not r["images"]:
+            error(f"{sub.name}: 缺少图片资源")
             has_error = True
 
-        if r["missing_png"]:
-            error(f"{sub.name}: atlas 引用但缺失 png：")
-            for p in sorted(r["missing_png"]):
+        if r["missing_img"]:
+            error(f"{sub.name}: atlas 引用但缺失图片：")
+            for p in sorted(r["missing_img"]):
                 print(f"    - {p}")
             has_error = True
 
-        if r["unused_png"]:
-            warn(f"{sub.name}: 未被 atlas 使用的 png：")
-            for p in sorted(r["unused_png"]):
+        if r["unused_img"]:
+            warn(f"{sub.name}: 未被 atlas 使用的图片：")
+            for p in sorted(r["unused_img"]):
                 print(f"    - {p}")
 
         if has_error:
