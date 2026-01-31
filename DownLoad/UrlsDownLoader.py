@@ -3,8 +3,8 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ===== 常量配置 =====
-INPUT_TXT = r"D:\Games\GameUnpackAssets\mymodel\Spine\AoLaXing\output-bg.txt"  # 输入 URL 列表
-OUTPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\AoLaXing\output-bg" # 输出目录
+INPUT_TXT = r"C:\Users\86182\Desktop\Git\violet-wdream\GamesArchive\AoQiChuanShuo\File\diff.txt"  # 输入 URL 列表
+OUTPUT_DIR = r"C:\Users\86182\Desktop\Git\violet-wdream\GamesArchive\AoQiChuanShuo\File\output" # 输出目录
 THREADS = 16                                        # 线程数
 TIMEOUT = 15
 # ==================

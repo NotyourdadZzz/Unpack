@@ -2,7 +2,7 @@
 from pathlib import Path
 
 # ================= 配置 =================
-ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\AoLaXing\Spine"
+ROOT_DIR = r"C:\Users\86182\Desktop\Git\violet-wdream\GamesArchive\AoQiChuanShuo\File\Spine"
 
 ATLAS_EXT = ".atlas"
 SKEL_EXTS = {".skel", ".json"}   # 骨骼文件
