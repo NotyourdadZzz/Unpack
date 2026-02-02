@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import argparse
 
-# 直接用 "bc"，系统会自动在 PATH 中查找
+# 直接用 bandizip 解压，系统会自动在 PATH 中查找，低版本是bc，高版本应该是bz
 CMD = "bc"         
 
 def unpack(wpk_path: Path, delete_source: bool):
