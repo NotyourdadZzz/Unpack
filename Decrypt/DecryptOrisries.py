@@ -1,6 +1,5 @@
 from Crypto.Cipher import AES
 import struct
-import binascii
 import os
 import sys
 
