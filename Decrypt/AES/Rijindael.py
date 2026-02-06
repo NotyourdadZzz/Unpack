@@ -1,57 +1,59 @@
 import os
 from pathlib import Path
-from py3rijndael import RijndaelCbc, Pkcs7Padding
+import clr  # pythonnet  python <= 3.12
+
+clr.AddReference("System")
+from System.Security.Cryptography import Rijndael, PaddingMode, CryptoStream, CryptoStreamMode
+from System.IO import MemoryStream
 
 # ------------------- 配置 -------------------
-INPUT_DIR = Path(r"C:\Users\86182\Downloads\game_bin")      # 输入目录
-OUTPUT_DIR = Path(r"C:\Users\86182\Downloads\output1")  # 输出目录
+INPUT_DIR = Path(r"C:\Users\86182\Downloads\game_bin")
+OUTPUT_DIR = Path(r"C:\Users\86182\Downloads\output1")
 
 KEY_STR = "0BFAB106A793DCA7F06789412023ED45"
 IV_STR  = "D9AB89AA56F5673001127802CDEF00BC"
-
-BLOCK_SIZE = 32  # Rijndael-256 block size
 # ------------------------------------------
 
-KEY_BYTES = KEY_STR.encode('utf-8')
-IV_BYTES  = IV_STR.encode('utf-8')
+KEY_BYTES = KEY_STR.encode("utf-8")
+IV_BYTES  = IV_STR.encode("utf-8")
 
-cipher_template = RijndaelCbc(
-    key=KEY_BYTES,
-    iv=IV_BYTES,
-    padding=Pkcs7Padding(BLOCK_SIZE),
-    block_size=BLOCK_SIZE
-)
-
-def decrypt_file(input_path: Path, output_path: Path):
+def decrypt_file(in_path: Path, out_path: Path):
     try:
-        with open(input_path, 'rb') as f:
-            encrypted_data = f.read()
+        with open(in_path, "rb") as f:
+            enc_data = f.read()
 
-        cipher = RijndaelCbc(
-            key=KEY_BYTES,
-            iv=IV_BYTES,
-            padding=Pkcs7Padding(BLOCK_SIZE),
-            block_size=BLOCK_SIZE
-        )
-        decrypted_data = cipher.decrypt(encrypted_data)
+        # === .NET Rijndael ===
+        rij = Rijndael.Create()
+        rij.BlockSize = 256
+        rij.Key = KEY_BYTES
+        rij.IV = IV_BYTES
+        rij.Padding = PaddingMode.PKCS7
 
-        os.makedirs(output_path.parent, exist_ok=True)
+        decryptor = rij.CreateDecryptor()
 
-        with open(output_path, 'wb') as f:
-            f.write(decrypted_data)
+        ms_in = MemoryStream(enc_data)
+        cs = CryptoStream(ms_in, decryptor, CryptoStreamMode.Read)
+        ms_out = MemoryStream()
 
-        print(f"[OK] {input_path} -> {output_path}")
+        cs.CopyTo(ms_out)
+        dec_data = bytes(ms_out.ToArray())
+
+        os.makedirs(out_path.parent, exist_ok=True)
+        with open(out_path, "wb") as f:
+            f.write(dec_data)
+
+        print(f"[OK] {in_path} -> {out_path}")
 
     except Exception as e:
-        print(f"[FAILED] {input_path}: {e}")
+        print(f"[FAILED] {in_path}: {e}")
 
-def decrypt_all_files():
-    for root, dirs, files in os.walk(INPUT_DIR):
-        for file_name in files:
-            input_file = Path(root) / file_name
-            relative_path = input_file.relative_to(INPUT_DIR)
-            output_file = OUTPUT_DIR / relative_path
-            decrypt_file(input_file, output_file)
+def decrypt_all():
+    for root, _, files in os.walk(INPUT_DIR):
+        for name in files:
+            inp = Path(root) / name
+            rel = inp.relative_to(INPUT_DIR)
+            out = OUTPUT_DIR / rel
+            decrypt_file(inp, out)
 
 if __name__ == "__main__":
-    decrypt_all_files()
+    decrypt_all()
