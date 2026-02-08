@@ -65,5 +65,5 @@ if __name__ == '__main__':
     print(f"解压结果: {Decompress(b64)}")
 
     # 压缩
-    uid = "4e4a3e30-eb8f-4aec-886d-e34c458cc501"
+    uid = "00b6ca41-63ed-458e-910c-6bd6f2d19c80"
     print(f"压缩结果: {Compress(uid)}")

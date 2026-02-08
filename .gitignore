@@ -56,3 +56,4 @@ test_output/
 debug/
 temp/
 test/
+node_modules/

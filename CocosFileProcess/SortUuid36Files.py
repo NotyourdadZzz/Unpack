@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 # ---------- 配置 ----------
-CONFIG_PATH = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources\config.json")      # config.json 路径
-INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources\native")               # 待分类文件根目录
-OUTPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\resources")             # 输出目录
+CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\config1.json")      # config.json 路径
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\Res")               # 待分类文件根目录
+OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\output")             # 输出目录
 # --------------------------
 
 
@@ -25,10 +25,14 @@ def compress_uuid(full_uuid: str) -> str:
     """
     将标准36位UUID转换为22位短UUID（Base64风格）
     """
-    if len(full_uuid) != 36:
-        return full_uuid
+    
+    parts = full_uuid.split('@')
+    uuid_part = parts[0]
+    suffix_part = '@' + parts[1] if len(parts) > 1 else ''
 
-    uuid_part = full_uuid.split('@')[0]
+    if len(uuid_part) != 36:
+        return full_uuid
+    
     clean_uuid = uuid_part.replace("-", "")
     hex_map = {c: i for i, c in enumerate(HEX_CHARS)}
     zip_uuid = [uuid_part[0], uuid_part[1]]  # 保留前两字符
@@ -41,7 +45,9 @@ def compress_uuid(full_uuid: str) -> str:
         zip_uuid.append(BASE64_KEYS[(left << 2) + (mid >> 2)])
         zip_uuid.append(BASE64_KEYS[((mid & 3) << 4) + right])
 
-    return ''.join(zip_uuid)
+    compressed = ''.join(zip_uuid)
+    return compressed + suffix_part
+
 
 
 
@@ -53,9 +59,9 @@ uuid22_to_path = {}
 uuids = config.get("uuids", [])
 paths_dict = config.get("paths", {})
 
-for k, v in paths_dict.items():
-    idx = int(k)
-    path_str = v[0]  # 原始资源路径
+for uuidIndex, path in paths_dict.items(): # <uuidIndex, path>
+    idx = int(uuidIndex)
+    path_str = path[0]  # 原始资源路径
     if idx < len(uuids):
         uuid22 = uuids[idx]
         uuid22_to_path[uuid22] = path_str
@@ -70,9 +76,9 @@ for root, dirs, files in os.walk(INPUT_DIR):
         name, ext = os.path.splitext(file)
         ext = ext.lower()
 
-        if len(name) == 36:
+        if len(name) >= 36:
             uuid22 = compress_uuid(name)
-        else:
+        else:#<36
             uuid22 = name     
 
         if uuid22 not in uuid22_to_path:

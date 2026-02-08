@@ -88,13 +88,13 @@ for src in INPUT_DIR.rglob("*"):
         data = src.read_bytes()
         original_data = data  # 保存原始数据
 
-        # 1️⃣ 解压
+        # 解压
         if is_ccz(data):
             data = inflate_ccz(data)
         elif is_gzip(data):
             data = inflate_gzip(data)
 
-        # 2️⃣ 解密 beeplay
+        # 解密 beeplay
         if data.startswith(SIGNATURE):
             try:
                 data = decrypt_beeplay(data)
@@ -111,7 +111,7 @@ for src in INPUT_DIR.rglob("*"):
         if src.suffix.lower() != ".astc":
             continue
         
-        # 3️⃣ astc → png
+        # astc → png
         png_path = src.with_suffix(".png")
         subprocess.run(
             [ASTCENC, f"-d{MODE}", str(src), str(png_path)],
@@ -119,7 +119,7 @@ for src in INPUT_DIR.rglob("*"):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        # 4️⃣ 成功后删除 astc
+        # 成功后删除 astc
         src.unlink(missing_ok=True)
 
         print("OK   :", png_path.name)
