@@ -1,5 +1,6 @@
 from twofish import Twofish
 import os
+# 解密 无期迷途 资产清单文件twofish加密
 
 def pkcs7_pad(data, block_size=16):
     """PKCS7 填充"""

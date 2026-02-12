@@ -34,7 +34,7 @@ resp = requests.post(PATCHLIST_URL, headers=headers, data=data, timeout=10)
 patchlist = resp.json()
 
 hotfix_version = patchlist["game_config_patch"]["extra"]["hotfix_version"]
-Version = ".".join(hotfix_version.split(".")[:2])  # 2.3
+Version = ".".join(hotfix_version.split(".")[:2])  # 2.3.48 取出前两位 2.3
 
 apk_url = patchlist["game_config_apk"]["apk_url"]
 
