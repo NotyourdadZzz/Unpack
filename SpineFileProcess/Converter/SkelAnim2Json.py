@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+# 仅用于从花亦山手游的二进制骨骼文件和外部 .spineani 文件中提取动画数据，并转换为 JSON 格式。
 import os, glob, json, struct
-from SkelToJson import (
+from Skel2Json import (
     read_binary_skeleton,
     write_json_data,
     Color,
@@ -9,7 +11,7 @@ from SkelToJson import (
     OUTPUT_PATH,
 )
 
-ANIM_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data"
+ANIM_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\output\test"
 
 class AnimationReader:
     def __init__(self, data: bytes):
@@ -47,6 +49,22 @@ class AnimationReader:
         if cnt < 0: raise EOFError("negative float array length")
         return [self.f32() for _ in range(cnt)]
 
+    def read_float_array_array(self):
+        cnt = self.varint()
+        if cnt < 0: raise EOFError("negative float array array length")
+        return [self.read_float_array() for _ in range(cnt)]
+
+    def read_int_array(self):
+        cnt = self.varint()
+        if cnt < 0: raise EOFError("negative int array length")
+        return [self.i32() for _ in range(cnt)]
+
+    def read_int_array_array(self):
+        cnt = self.varint()
+        if cnt < 0: raise EOFError("negative int array array length")
+        return [self.read_int_array() for _ in range(cnt)]
+
+
 def read_curve_be(r: AnimationReader, f: TimelineFrame):
     try: c = r.u8()
     except EOFError: return
@@ -66,14 +84,17 @@ def parse_spineani(data: bytes, sk) -> Animation:
     anim = Animation(name=name)
     bname = lambda i: sk.bones[i].name if 0 <= i < len(sk.bones) else f"bone_{i}"
     sname = lambda i: sk.slots[i].name if 0 <= i < len(sk.slots) else f"slot_{i}"
+    ikname = lambda i: sk.ikConstraints[i].name if 0 <= i < len(sk.ikConstraints) else f"ik_{i}"
+    tfname = lambda i: sk.transformConstraints[i].name if 0 <= i < len(sk.transformConstraints) else f"tf_{i}"
+    pcname = lambda i: sk.pathConstraints[i].name if 0 <= i < len(sk.pathConstraints) else f"path_{i}"
 
     for ti in range(max(tcount, 0)):
         try:
-            ttype = r.i32()  # 时间线类型固定 4 字节大端
+            ttype = r.i32()  
         except EOFError:
             print(f"[ANI] EOF when reading timeline type #{ti}")
             break
-        # print(f"  [TL] idx={ti}, type={ttype}, pos={r.pos}")
+        print(f"  [TL] idx={ti}, type={ttype}, pos={r.pos}")
 
         # 0 Rotate: curves(float[]), boneIndex(int32), frames(float[] => time,angle)
         if ttype == 0:
@@ -139,15 +160,27 @@ def parse_spineani(data: bytes, sk) -> Animation:
             except EOFError:
                 break
 
-        # 4 Attachment（保留原逻辑）
+        # 4 Attachment
         elif ttype == 4:
             try:
-                idx = r.varint()
-                fcount = r.varint()
-                print(f"    slot={idx}, fcount={fcount}")
+                idx = r.i32()
+                times = r.read_float_array()
+                names = []
+                n = r.varint()
+                for _ in range(n):
+                    names.append(r.str_varint())
+                print(f"    slot={idx}, times={len(times)}, names={len(names)}")
+
+                if len(names) != len(times):
+                    print(f"    [WARN] attachment times/names 长度不符: {len(times)} vs {len(names)}")
+
                 tl = []
-                for _ in range(fcount):
-                    f = TimelineFrame(); f.time = 0.0; f.str1 = r.str_varint(); tl.append(f)
+                for i, t in enumerate(times):
+                    f = TimelineFrame()
+                    f.time = t
+                    if i < len(names):
+                        f.str1 = names[i]
+                    tl.append(f)
                 anim.slots.setdefault(sname(idx), {})["attachment"] = tl
             except EOFError:
                 break
@@ -170,83 +203,91 @@ def parse_spineani(data: bytes, sk) -> Animation:
             except EOFError:
                 break
 
-        # 6 Deform（暂保留旧逻辑）
+        # 6 Deform
         elif ttype == 6:
             try:
-                idx = r.varint()
+                curves = r.read_float_array()
+                idx = r.i32()
                 att = r.str_varint()
-                skin_idx = r.varint()
-                fcount = r.varint()
-                print(f"    slot={idx}, skin={skin_idx}, att={att}, fcount={fcount}")
+                skin_idx = r.i32()
+                times = r.read_float_array()
+                vert_sets = r.read_float_array_array()
+                print(
+                    f"    slot={idx}, skin={skin_idx}, att={att}, times={len(times)}, framesets={len(vert_sets)}, curves={len(curves)}")
+                if len(vert_sets) != len(times):
+                    print(f"    [WARN] deform times/verts 长度不符: {len(times)} vs {len(vert_sets)}")
                 skin_name = sk.skins[skin_idx].name if 0 <= skin_idx < len(sk.skins) else "default"
                 tl = []
-                for _ in range(fcount):
-                    f = TimelineFrame(); f.time = r.f32(); vcount = r.varint()
-                    if vcount > 0:
-                        vcount = min(vcount, 100000)
-                        for _ in range(vcount):
-                            f.vertices.append(r.f32())
+                for i, t in enumerate(times):
+                    f = TimelineFrame()
+                    f.time = t
+                    if i < len(vert_sets):
+                        f.vertices = vert_sets[i]
                     tl.append(f)
                 anim.attachments.setdefault(skin_name, {}).setdefault(sname(idx), {}).setdefault(att, {})["deform"] = tl
             except EOFError:
                 break
 
-        # 7 Event（保留）
+        # 7 Event
         elif ttype == 7:
             try:
-                fcount = r.varint()
-                print(f"    events fcount={fcount}")
+                times = r.read_float_array()  # 时间戳数组
+                ecount = r.i32()
+                print(f"    events count={ecount}, times={len(times)}")
                 tl = []
-                for _ in range(fcount):
+                for i in range(ecount):
                     f = TimelineFrame()
-                    f.time = r.f32()
-                    f.str1 = r.str_varint()
-                    f.int1 = r.i32()
-                    f.value1 = r.f32()
+                    f.time = times[i] if i < len(times) else 0.0
+                    f.str1 = r.str_varint()  # 事件名/字符串字段
+                    f.int1 = r.i32()  # int
+                    f.value1 = r.f32()  # float
                     f.str2 = r.str_varint()
                     tl.append(f)
+                if len(times) != ecount:
+                    print(f"    [WARN] event times/count 不符: {len(times)} vs {ecount}")
                 anim.events = tl
             except EOFError:
                 break
 
-        # 8 DrawOrder（保留）
+        # 8 DrawOrder
         elif ttype == 8:
             try:
-                fcount = r.varint()
-                print(f"    draworder fcount={fcount}")
+                frames = r.read_float_array()
+                orders = r.read_int_array_array()
+                print(f"    draworder frames={len(frames)}, orders={len(orders)}")
+                if len(frames) != len(orders):
+                    print(f"    [WARN] draworder 时间/数组数不符: {len(frames)} vs {len(orders)}")
                 tl = []
-                for _ in range(fcount):
-                    f = TimelineFrame(); f.time = r.f32(); oc = r.varint()
-                    for _ in range(oc):
-                        sid = r.varint(); off = r.i32()
-                        f.offsets.append((sname(sid), off))
+                for i, t in enumerate(frames):
+                    f = TimelineFrame()
+                    f.time = t
+                    if i < len(orders):
+                        f.drawOrder = orders[i]  # 保存完整顺序数组
                     tl.append(f)
                 anim.drawOrder = tl
             except EOFError:
                 break
 
-        # 9 IK（暂保留旧帧读取，但前置 curves+idx）
+        # 9 IK
         elif ttype == 9:
             try:
                 curves = r.read_float_array()
                 idx = r.i32()
-                fcount = r.varint()
-                print(f"    ik={idx}, fcount={fcount}, curves={len(curves)}")
+                fa = r.read_float_array()
+                print(f"    ik={idx}, floats={len(fa)}, curves={len(curves)}")
                 tl = []
-                for fi in range(fcount):
+                for i in range(0, len(fa), 3):  # time, mix, bend/softness
+                    if i + 2 >= len(fa): break
                     f = TimelineFrame()
-                    f.time = r.f32()
-                    f.value1 = r.f32()
-                    f.value2 = r.f32()
-                    f.bendPositive = r.i32() > 0
-                    f.compress = r.u8() != 0
-                    f.stretch = r.u8() != 0
+                    f.time = fa[i]
+                    f.value1 = fa[i + 1]
+                    f.value2 = fa[i + 2]
                     tl.append(f)
-                anim.ik[bname(idx)] = tl
+                anim.ik[ikname(idx)] = tl
             except EOFError:
                 break
 
-        # 10 TransformConstraint（前置 curves+idx，frames float[] 粗解析）
+        # 10 TransformConstraint
         elif ttype == 10:
             try:
                 curves = r.read_float_array()
@@ -254,16 +295,20 @@ def parse_spineani(data: bytes, sk) -> Animation:
                 fa = r.read_float_array()
                 print(f"    tf={idx}, floats={len(fa)}, curves={len(curves)}")
                 tl = []
-                for i in range(0, len(fa), 4):
-                    if i + 3 >= len(fa): break
+                for i in range(0, len(fa), 5):  # time, rMix, tMix, sMix, shMix
+                    if i + 4 >= len(fa): break
                     f = TimelineFrame()
-                    f.time = fa[i]; f.value1 = fa[i+1]; f.value2 = fa[i+2]; f.value4 = fa[i+3]
+                    f.time = fa[i]
+                    f.value1 = fa[i + 1]  # rotateMix
+                    f.value2 = fa[i + 2]  # translateMix
+                    f.value3 = fa[i + 3]  # scaleMix
+                    f.value4 = fa[i + 4]  # shearMix
                     tl.append(f)
-                anim.transform.setdefault(bname(idx), []).extend(tl)
+                anim.transform[tfname(idx)] = tl
             except EOFError:
                 break
 
-        # 11 Path Position（前置 curves+idx，frames float[]）
+        # 11 Path Position
         elif ttype == 11:
             try:
                 curves = r.read_float_array()
@@ -276,7 +321,7 @@ def parse_spineani(data: bytes, sk) -> Animation:
                     f = TimelineFrame()
                     f.time = fa[i]; f.value1 = fa[i+1]
                     tl.append(f)
-                anim.path.setdefault(bname(idx), {})["position"] = tl
+                anim.path.setdefault(pcname(idx), {})["position"] = tl
             except EOFError:
                 break
 
@@ -293,7 +338,7 @@ def parse_spineani(data: bytes, sk) -> Animation:
                     f = TimelineFrame()
                     f.time = fa[i]; f.value1 = fa[i+1]
                     tl.append(f)
-                anim.path.setdefault(bname(idx), {})["spacing"] = tl
+                anim.path.setdefault(pcname(idx), {})["spacing"] = tl
             except EOFError:
                 break
 
@@ -310,7 +355,7 @@ def parse_spineani(data: bytes, sk) -> Animation:
                     f = TimelineFrame()
                     f.time = fa[i]; f.value1 = fa[i+1]; f.value2 = fa[i+2]
                     tl.append(f)
-                anim.path.setdefault(bname(idx), {})["mix"] = tl
+                anim.path.setdefault(pcname(idx), {})["mix"] = tl
             except EOFError:
                 break
 
@@ -360,6 +405,7 @@ def main():
         added = load_spineani_animations(sk, ANIM_PATH)
         print(f"[INFO] 外部动画补充 {added} 个")
     root = write_json_data(sk)
+
     out = OUTPUT_PATH
     with open(out, "w", encoding="utf-8") as f: json.dump(root, f, ensure_ascii=False, indent=4)
     print(f"[OK] 写出：{out}")

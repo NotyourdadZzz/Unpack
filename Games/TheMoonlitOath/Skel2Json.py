@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+#花亦山心之月 Convert skel 3.8 to json 
 from __future__ import annotations
 
 import base64
@@ -14,8 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 # ==============================
 # Config
 # ==============================
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\Senior_Dagongzhu_Sp_Pf_Cj.skel"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\Senior_Dagongzhu_Sp_Pf_Cj.json"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\output\test\Hero_Alaiye.skel"
+OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\output\test\Hero_Alaiye.json"
 ENDIAN = ">"
 
 

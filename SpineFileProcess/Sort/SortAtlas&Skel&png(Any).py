@@ -3,11 +3,10 @@
 import shutil
 from pathlib import Path
 from typing import Set
-import re
 
 # === 配置 ===
 DRYRUN = False   # True = 仅显示,不移动;False = 执行移动
-TARGET_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\AoLaXing\output"  # ← 目标目录(改成你的路径)
+TARGET_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\output\TMP"  # ← 目标目录(改成你的路径)
 # ============
 
 def parse_atlas_pngs(atlas_path: Path) -> Set[str]:

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
 import argparse
 
 def add_extension_to_files(extension, dry_run=False):
