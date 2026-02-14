@@ -1,5 +1,5 @@
 import json
-
+# 计算 JSON 文件中所有 "FileSize" 字段的总和
 def calc_total_size(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
