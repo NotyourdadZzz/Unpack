@@ -1,6 +1,6 @@
 # 用于 The Moonlit Oath 花亦山心之月 合并 .skel 和 .spineani 文件，生成包含动画数据的 JSON 文件，并删除原始文件。
 # 用法：修改TARGET_DIR为包含 .skel 和 .spineani 文件的目录，运行脚本后会自动处理所有匹配的文件。
-# 注意： 同目录需要有Skel2Json.py，该脚本依赖于Skel2Json中的数据结构和函数来读取骨骼数据和写出JSON数据。
+# 注意： 同目录需要有Skel2Json.py (在同目录TheMoonlitOath下可以下载)，该脚本依赖于Skel2Json中的数据结构和函数来读取骨骼数据和写出JSON数据。
 import os
 import glob
 import json

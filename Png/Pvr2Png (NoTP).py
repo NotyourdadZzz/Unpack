@@ -1,5 +1,4 @@
 import os
-import sys
 import zlib
 import struct
 from PIL import Image  #Pillow

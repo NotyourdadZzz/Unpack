@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
+// 将指定目录下的所有.fade.json文件转换为.motion3.json文件 (ParameterIdHashes) ，并将CubismPhysicsController.json转换为l2d.physics3.json
 function processFadeFiles(dirPath) {
     const files = fs.readdirSync(dirPath);
     for (const file of files) {

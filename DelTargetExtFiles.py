@@ -1,4 +1,11 @@
 import os
+# ===== 配置要删除的特定后缀文件 =====
+extensions_to_delete = [
+    '.pvr.ccz',
+    '.meta',
+    '.bak',
+    '.tmp'
+]
 
 def delete_files_with_extensions(extensions):
     """
@@ -17,7 +24,7 @@ def delete_files_with_extensions(extensions):
                 targets.append(os.path.join(dirpath, file))
 
     if not targets:
-        print("✅ 没有找到匹配的文件。")
+        print("没有找到匹配的文件。")
         return
 
     # 显示待删除文件列表
@@ -26,10 +33,10 @@ def delete_files_with_extensions(extensions):
         print(" -", path)
 
     print(f"\n共 {len(targets)} 个文件。")
-    confirm = input("\n❓是否确认删除这些文件？(y/N)：").strip().lower()
+    confirm = input("\n是否确认删除这些文件？(y/N)：").strip().lower()
 
     if confirm != 'y':
-        print("🚫 已取消操作。")
+        print("已取消操作。")
         return
 
     # 执行删除
@@ -38,18 +45,12 @@ def delete_files_with_extensions(extensions):
         try:
             os.remove(file_path)
             deleted_count += 1
-            print(f"🗑️ 已删除: {file_path}")
+            print(f"🗑已删除: {file_path}")
         except Exception as e:
-            print(f"⚠删除失败 {file_path}: {e}")
+            print(f"删除失败 {file_path}: {e}")
 
-    print(f"\n✅ 删除完成！共删除 {deleted_count} 个文件。")
+    print(f"\n删除完成！共删除 {deleted_count} 个文件。")
 
-# ===== 配置要删除的文件后缀 =====
-extensions_to_delete = [
-    '.pvr.ccz',
-    '.meta',
-    '.bak',
-    '.tmp'
-]
+
 
 delete_files_with_extensions(extensions_to_delete)
