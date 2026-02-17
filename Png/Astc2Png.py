@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil
 import subprocess
 import gzip, io, zlib
 # 需要下载 astcenc 配置环境变量
@@ -8,7 +7,7 @@ import gzip, io, zlib
 # astc: 解 gzip / ccz → beeplay → astcenc → png（原地）
 
 # ===== 固定参数 =====
-INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\AnimationSpine\_Common")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\Res\ERROR")
 
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17

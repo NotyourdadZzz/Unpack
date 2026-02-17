@@ -1,5 +1,4 @@
 import requests
-import json
 
 # ================== 基础配置 ==================
 PATCHLIST_URL = "https://api.shziyi.com:12101/v1/gameconfig/patchlist"
@@ -34,15 +33,17 @@ resp = requests.post(PATCHLIST_URL, headers=headers, data=data, timeout=10)
 patchlist = resp.json()
 
 hotfix_version = patchlist["game_config_patch"]["extra"]["hotfix_version"]
-Version = ".".join(hotfix_version.split(".")[:2])  # 2.3.48 取出前两位 2.3
-
+parts = hotfix_version.split(".")
+major_version = ".".join(parts[:2])   # 2.3
+minor_version = parts[2]              # 48
 apk_url = patchlist["game_config_apk"]["apk_url"]
 
-print(f"[Version] {Version}")
+print(f"major_version: {major_version}")
+print(f"minor_version: {minor_version}")
 print(f"[APK] {apk_url}\n")
 
 # ================== Step 2: res_releases.json ==================
-releases_url = f"{CDN_BASE}/{PLATFORM_PATH}/{Version}/latest/res_releases.json"
+releases_url = f"{CDN_BASE}/{PLATFORM_PATH}/{major_version}/latest/res_releases.json"
 releases = requests.get(releases_url, timeout=10).json()
 
 AssetsVersion = releases["Merges"][-1]["Version"]
@@ -56,7 +57,7 @@ current = START_VERSION
 while current < AssetsVersion:
     end = min(current + BLOCKSIZE, AssetsVersion)
     patch_urls.append(
-        f"{CDN_BASE}/{PLATFORM_PATH}/{Version}/patches/{current}_{end}.patch"
+        f"{CDN_BASE}/{PLATFORM_PATH}/{major_version}/patches/{current}_{end}.patch"
     )
     current = end
 
