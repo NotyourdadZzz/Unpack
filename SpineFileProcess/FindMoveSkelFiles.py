@@ -1,7 +1,8 @@
 import re
-import os
 from pathlib import Path
-
+# 作用： 扫描指定目录下的文件，识别出Spine相关的文件（.skel/.json .atlas），
+# 并将它们移动到指定的输出目录中。对于已经存在的目标文件，程序会跳过移动操作，
+# 并在控制台输出相应的信息。通过设置DRY_RUN变量，可以选择是否实际执行文件移动操作，还是仅打印出将要执行的操作。
 # ====== 配置 ======
 INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\output")
 OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\Res\ERROR")
@@ -89,8 +90,8 @@ for src in INPUT_DIR.rglob("*"):
     if is_spine_json(src):
         move_file(src, OUTPUT_DIR / (src.stem + ".json"))
 
-    elif is_spine_skel(src):
-        move_file(src, OUTPUT_DIR / (src.stem + ".skel"))
+    # elif is_spine_skel(src):
+    #     move_file(src, OUTPUT_DIR / (src.stem + ".skel"))
 
     elif is_spine_atlas(src):
         move_file(src, OUTPUT_DIR / (src.stem + ".atlas"))

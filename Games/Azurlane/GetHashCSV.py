@@ -1,6 +1,4 @@
 import socket
-import requests
-import os
 from typing import Tuple, Dict
 import re
 

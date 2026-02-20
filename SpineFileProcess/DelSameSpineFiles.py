@@ -2,6 +2,10 @@
 from pathlib import Path
 import os
 import re
+import hashlib
+
+# 作用：扫描指定目录及子目录，寻找可能的重复 Spine 资源文件（.png/.atlas/.skel/.json）
+# 因为使用AS导出时，可能会生成多个同名但大小也相同的文件（如 xxx.png、xxx.png #1、xxx.png #2），这些文件可能是冗余的，可以删除。
 
 # ================= 配置 =================
 ROOT_DIR = r"C:\Users\86182\Downloads\Edian\test\CardShow"
@@ -12,6 +16,12 @@ SIZE_TOLERANCE = 1024  # 1 KB
 
 # xxx #12345
 HASH_SUFFIX_RE = re.compile(r"\s+#\d+$")
+def file_md5(path: Path, chunk_size=1024 * 1024):
+    md5 = hashlib.md5()
+    with path.open("rb") as f:
+        while chunk := f.read(chunk_size):
+            md5.update(chunk)
+    return md5.hexdigest()
 
 def split_name(name: str):
     """
@@ -69,8 +79,9 @@ def deduplicate(root: Path):
                     size_b = b.stat().st_size
 
                     if abs(size_a - size_b) <= SIZE_TOLERANCE:
-                        cluster.append(b)
-                        used.add(j)
+                        if file_md5(a) == file_md5(b):
+                            cluster.append(b)
+                            used.add(j)
 
                 if len(cluster) <= 1:
                     continue

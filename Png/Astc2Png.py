@@ -7,7 +7,7 @@ import gzip, io, zlib
 # astc: 解 gzip / ccz → beeplay → astcenc → png（原地）
 
 # ===== 固定参数 =====
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\Res\ERROR")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\output\UI_new\YYHD_yyhd")
 
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17

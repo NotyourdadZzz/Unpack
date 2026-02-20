@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 #  > python3.10
+# 作用：扫描指定目录及子目录，寻找 Spine atlas 文件（.atlas），并根据 atlas 内记录的第一个 png 文件名重命名 atlas 文件。
 INPUT_DIR = Path(r"C:\Users\86182\Documents\MuMu共享文件夹\Download\test\outputSpine")
 
 ATLAS_SIZE_RE = re.compile(r"^size:\s*\d+\s*,\s*\d+\s*$", re.I)
