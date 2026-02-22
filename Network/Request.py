@@ -16,8 +16,13 @@ data = {
 # 如果 "Content-Type": "application/json" 要json=data
 resp = requests.post(url, headers=headers, json=data, timeout=10)
 
-# 否则"Content-Type": "application/x-www-form-urlencoded" 需要data=data
+# 否则 "Content-Type": "application/x-www-form-urlencoded" 需要data=data
 #resp = requests.post(url, headers=headers, data=data, timeout=10)
+baseURL = resp.json()["data"]["AliHotUpdateUrl"]
 
 print(resp.text)
+print("Spine: "+ baseURL+ "/spine_version.txt")
+print("SpineBundle: "+ baseURL + "/spine_res_bundle_data.dat")
 
+print("Base: "+ baseURL + "/base_version.txt")
+print("BaseBundle: "+ baseURL + "/base_res_bundle_data.dat")

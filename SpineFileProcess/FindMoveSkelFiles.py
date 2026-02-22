@@ -90,8 +90,8 @@ for src in INPUT_DIR.rglob("*"):
     if is_spine_json(src):
         move_file(src, OUTPUT_DIR / (src.stem + ".json"))
 
-    # elif is_spine_skel(src):
-    #     move_file(src, OUTPUT_DIR / (src.stem + ".skel"))
+    elif is_spine_skel(src):
+        move_file(src, OUTPUT_DIR / (src.stem + ".skel"))
 
     elif is_spine_atlas(src):
         move_file(src, OUTPUT_DIR / (src.stem + ".atlas"))

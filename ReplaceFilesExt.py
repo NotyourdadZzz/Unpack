@@ -2,16 +2,17 @@
 import os
 
 # ====== 配置区 ======
-INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\aoqi\assets\gameassets"
-SrcEXT = "asset"
-DstEXT = "json"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\assets\illusts"
+SrcEXT = ".rgba4444.png"      # 源扩展名（可包含多个点）
+DstEXT = ".png"                # 目标扩展名
 DRY_RUN = False
 # ====================
 
-if not SrcEXT.startswith("."):
-    SrcEXT = "." + SrcEXT
-if not DstEXT.startswith("."):
-    DstEXT = "." + DstEXT
+# 确保扩展名以点开头（但保留多段）
+if not SrcEXT.startswith('.'):
+    SrcEXT = '.' + SrcEXT
+if not DstEXT.startswith('.'):
+    DstEXT = '.' + DstEXT
 
 count = 0
 
@@ -22,12 +23,14 @@ for root, _, files in os.walk(INPUT_PATH):
         if os.path.islink(filepath):
             continue
 
-        name, ext = os.path.splitext(file)
+        # 检查文件名是否以 SrcEXT 结尾（忽略大小写）
+        if file.lower().endswith(SrcEXT.lower()):
+            # 去掉源扩展名，得到基础名
+            base = file[:-len(SrcEXT)]
+            new_filename = base + DstEXT
+            new_path = os.path.join(root, new_filename)
 
-        if ext.lower() == SrcEXT.lower():
-            new_path = os.path.join(root, name + DstEXT)
-
-            # 如果目标文件已存在
+            # 处理目标文件已存在的情况
             if os.path.exists(new_path):
                 src_size = os.path.getsize(filepath)
                 dst_size = os.path.getsize(new_path)
