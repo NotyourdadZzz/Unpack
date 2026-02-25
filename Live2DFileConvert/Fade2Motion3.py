@@ -3,11 +3,11 @@ import json
 import re
 from pathlib import Path
 
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\PathToNowhere (WuQiMiTu)\tryHash\TestRes\fade"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\PathToNowhere (WuQiMiTu)\tryHash\TestRes\motion3"
+INPUT_PATH = r"C:\Users\86182\Downloads\TEMP"
+OUTPUT_PATH = r"C:\Users\86182\Downloads\OUTPUT"
 
 FADE_REGEX = re.compile(r'.*\.fade(\s*@-?\d+)?\.json$')  # 匹配 .fade.json 或 .fade @xxxx.json
-IsHash = True
+IsHash = False
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 
@@ -46,7 +46,8 @@ def process_fade_files(dir_path):
             file_path = os.path.join(root, file)
             if not FADE_REGEX.match(file):
                 continue
-            file_name = os.path.splitext(file)[0]
+            file_name = os.path.splitext(file)[0]  # 去掉 .json
+            file_name = re.sub(r'\.fade', '', file_name)  # 去掉 .fade
             with open(file_path, 'r', encoding='utf-8') as f:
                 obj = json.load(f)
 

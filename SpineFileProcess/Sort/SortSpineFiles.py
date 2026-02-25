@@ -9,19 +9,21 @@ import json
 import shutil
 from pathlib import Path
 from PIL import Image
-import imagehash as imagehash_lib
 
-INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\FSZS\assets\project\model\test"
-OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\FSZS\assets\project\model\output"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\SuperDemension\hotRes"
+OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\SuperDemension\outputHot"
 DRY_RUN = False
 
 # 骨骼-纹理集匹配的最低 Jaccard 相似度阈值
-MATCH_THRESHOLD = 0.1
+MATCH_THRESHOLD = 0.15
 # 从 skel 二进制中提取字符串的最短长度
 MIN_STRING_LEN = 4
 
 SKEL_VER_RE = re.compile(rb"\d+\.\d+\.\d+")
 ATLAS_SIZE_RE = re.compile(r"^size:\s*\d+\s*,\s*\d+\s*$", re.I)
+
+_IMG_EXTS        = (".png", ".webp", ".jpg", ".jpeg")
+_PAGE_META_KEYS  = ("format:", "filter:", "repeat:", "pma:")
 
 # ---------------------------------------------------------------------------
 # 文件类型识别
@@ -47,25 +49,29 @@ def is_atlas(path: Path) -> bool:
     try:
         with path.open("rb") as f:
             lines = []
-            for _ in range(5):
+            for _ in range(6):
                 line = f.readline()
                 if not line:
                     break
                 line = line.strip()
                 if line:
                     lines.append(line)
-                if len(lines) >= 2:
+                if len(lines) >= 3:
                     break
     except OSError:
         return False
 
-    if len(lines) < 2:
+    if not lines:
         return False
 
-    if not lines[0].lower().endswith(b".png") and not lines[0].lower().endswith(b".webp"):
+    # 第一行必须是已知图像扩展名的文件名
+    first = lines[0].lower()
+    if not any(first.endswith(ext.encode()) for ext in _IMG_EXTS):
         return False
 
-    if not ATLAS_SIZE_RE.match(lines[1].decode("ascii", errors="ignore")):
+    # 后续行中至少有一行匹配 size: 或 format: 或 filter:（宽松验证）
+    rest_text = b" ".join(lines[1:]).decode("ascii", errors="ignore").lower()
+    if not any(k in rest_text for k in ("size:", "format:", "filter:", "bounds:")):
         return False
 
     return True
@@ -89,22 +95,24 @@ def is_json(path: Path) -> bool:
 def is_skel(path: Path) -> bool:
     try:
         with path.open("rb") as f:
-            head = f.read(128)
+            head = f.read(32)
     except OSError:
         return False
 
     if head.lstrip().startswith(b"{"):
         return False
 
-    return SKEL_VER_RE.search(head) is not None
+    # 排除 MP3：ID3v2 标签头 或 MPEG 帧同步字节 (0xFF 0xEx)
+    if head[:3] == b"ID3":
+        return False
+    if len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0:
+        return False
 
+    return SKEL_VER_RE.search(head) is not None
 
 # ---------------------------------------------------------------------------
 # Atlas 解析
 # ---------------------------------------------------------------------------
-
-_IMG_EXTS = (".png", ".webp", ".jpg", ".jpeg")
-_PAGE_META_KEYS = ("format:", "filter:", "repeat:", "pma:")
 
 
 def parse_atlas_pages(path: Path) -> list[dict]:
@@ -281,44 +289,18 @@ def extract_strings_from_skel(path: Path, min_len: int = MIN_STRING_LEN) -> set:
 
 
 # ---------------------------------------------------------------------------
-# 图像 Hash 匹配
-# ---------------------------------------------------------------------------
-
-def compute_region_hashes(image_path: Path, regions: list, sample_count: int = 10) -> list:
-    """
-    对图像按 atlas region 坐标裁剪后计算感知哈希。
-    全透明的裁剪块跳过（而非中止）。
-    返回 hash 列表（可能为空）。
-    """
-    try:
-        img = Image.open(image_path).convert("RGBA")
-    except Exception:
-        return []
-
-    hashes = []
-    for region in regions[:sample_count]:
-        x = region.get("x", 0)
-        y = region.get("y", 0)
-        w = region.get("w", 0)
-        h = region.get("h", 0)
-        if w <= 0 or h <= 0:
-            continue
-
-        crop = img.crop((x, y, x + w, y + h))
-
-        # 全透明则跳过此 region
-        if crop.getbbox() is None:
-            continue
-
-        hval = imagehash_lib.phash(crop)
-        hashes.append(hval)
-
-    return hashes
-
-
-# ---------------------------------------------------------------------------
 # 步骤 2：骨骼与 atlas 匹配
 # ---------------------------------------------------------------------------
+
+def _norm_names(names: set) -> set:
+    result = set(names)
+    for name in names:
+        result.add(name.lower())
+        last = re.split(r"[/\\]", name)[-1]
+        result.add(last)
+        result.add(last.lower())
+    return result
+
 
 def _containment(skel_strings: set, atlas_names: set) -> float:
     """atlas region 名在 skel 字符串池中的覆盖率。
@@ -330,26 +312,25 @@ def _containment(skel_strings: set, atlas_names: set) -> float:
 
 def match_groups(skeletons: list, atlases: list) -> list:
     """
-    三阶段 1:1 独占匹配：
-      Phase 1 - 用 MATCH_THRESHOLD 粗筛：每个 atlas 找最优 skel。
-      Phase 2 - 冲突解决：同一 skel 争到多个 atlas 时，保留得分最高的，
-                其余降级为 unmatched。
-      Phase 3 - 降阈值补漏：unmatched skel 与 unmatched atlas 按任意正得分
-                贪心从高到低重新匹配。
+    四阶段 1:1 独占匹配：
+      Phase 1 - containment 粗筛（≥ MATCH_THRESHOLD）。
+      Phase 2 - 冲突解决：同一 skel 争到多个 atlas 时保留最高分。
+      Phase 3 - 降阈值补漏：任意正 containment 得分，贪心匹配。
+      Phase 4 - 文件名 token 相似度兜底：Phase 3 后仍未匹配时，
+                用 skel/atlas stem 的词元 Jaccard（数字/字母分词）匹配。
     返回列表，每项 {'skel': Path|None, 'atlases': [Path], 'score': float}。
     """
-    # --- 提取各文件的 region 名集合 ---
+    # --- 提取各文件的 region 名集合，并正规化（路径末段 + 小写） ---
     skel_regions: dict[Path, set] = {}
     for skel in skeletons:
-        if is_json(skel):
-            skel_regions[skel] = extract_regions_from_json(skel)
-        else:
-            skel_regions[skel] = extract_strings_from_skel(skel)
+        raw = extract_regions_from_json(skel) if is_json(skel) else extract_strings_from_skel(skel)
+        skel_regions[skel] = _norm_names(raw)
 
     atlas_names: dict[Path, set] = {}
     for atl in atlases:
         parsed = parse_atlas(atl)
-        atlas_names[atl] = {r["name"] for r in parsed}
+        raw = {r["name"] for r in parsed}
+        atlas_names[atl] = _norm_names(raw)
 
     # --- Phase 1：每个 atlas 找最优 skel（高于阈值）---
     atlas_to_skel: dict[Path, Path] = {}
@@ -407,6 +388,35 @@ def match_groups(skeletons: list, atlases: list) -> list:
 
         unmatched_atlases = [a for a in unmatched_atlases if a not in claimed_a]
 
+    # --- Phase 4：文件名 token Jaccard 兜底 ---
+    unmatched_skels = [s for s, (a, _) in final.items() if a is None]
+
+    if unmatched_skels and unmatched_atlases:
+        def _stem_tokens(p: Path) -> set:
+            return set(re.findall(r"[a-zA-Z]+|\d+", p.stem.lower()))
+
+        pairs4: list[tuple[float, Path, Path]] = []
+        for atl in unmatched_atlases:
+            ta = _stem_tokens(atl)
+            for skel in unmatched_skels:
+                ts = _stem_tokens(skel)
+                union = ts | ta
+                if union:
+                    s = len(ts & ta) / len(union)
+                    if s > 0:
+                        pairs4.append((s, skel, atl))
+        pairs4.sort(reverse=True)
+
+        claimed_s4: set[Path] = set()
+        claimed_a4: set[Path] = set()
+        for score, skel, atl in pairs4:
+            if skel not in claimed_s4 and atl not in claimed_a4:
+                final[skel] = (atl, score)
+                claimed_s4.add(skel)
+                claimed_a4.add(atl)
+
+        unmatched_atlases = [a for a in unmatched_atlases if a not in claimed_a4]
+
     # --- 组装结果 ---
     result = []
     for skel in skeletons:
@@ -422,9 +432,32 @@ def match_groups(skeletons: list, atlases: list) -> list:
 # 步骤 3：为每个 atlas 找到对应图像
 # ---------------------------------------------------------------------------
 
-def _count_valid_crops(img_obj: Image.Image, regions: list, sample_count: int = 10) -> int:
-    """统计图像在 region 坐标处非全透明的裁剪块数量（不计算 phash，仅判断透明度）。"""
-    count = 0
+def _real_img_ext(path: Path) -> str:
+    """通过文件头返回图像文件的正确扩展名（.png / .webp），读取失败则回退到原扩展名。"""
+    try:
+        with path.open("rb") as f:
+            head = f.read(12)
+    except OSError:
+        return path.suffix
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        return ".png"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return ".webp"
+    return path.suffix
+
+
+def _score_crops(img_obj: Image.Image, regions: list, sample_count: int = 20) -> tuple[int, float]:
+    """
+    对图像在 region 坐标处进行两级打分：
+      - 主分 (int)  : 有任意非透明像素的 region 数量（等同原 getbbox 逻辑）
+      - 副分 (float): 主分相同时，以 alpha 通道均值之和作为 tiebreaker
+
+    分开两级的原因：
+      - alpha 均值单独使用时，全不透明的 UI 图像会错误胜过带渐变的精灵图
+      - 二进制计数维持精度，alpha 均值仅在平手时才起作用
+    """
+    primary   = 0
+    secondary = 0.0
     for region in regions[:sample_count]:
         x = region.get("x", 0)
         y = region.get("y", 0)
@@ -432,9 +465,19 @@ def _count_valid_crops(img_obj: Image.Image, regions: list, sample_count: int = 
         h = region.get("h", 0)
         if w <= 0 or h <= 0:
             continue
-        if img_obj.crop((x, y, x + w, y + h)).getbbox() is not None:
-            count += 1
-    return count
+        crop = img_obj.crop((x, y, x + w, y + h))
+        if crop.getbbox() is None:
+            continue
+        primary += 1
+        # 仅对有内容的 region 计算 alpha 密度（tiebreaker，无需每次都算）
+        alpha = crop.getchannel("A")
+        cw, ch = alpha.size
+        total  = cw * ch
+        if total:
+            hist      = alpha.histogram()
+            wsum      = sum(i * c for i, c in enumerate(hist))
+            secondary += wsum / (255.0 * total)
+    return primary, secondary
 
 
 def find_images_for_atlas(
@@ -461,6 +504,11 @@ def find_images_for_atlas(
         return []
 
     images_set    = set(images)
+    # stem → path 快速检索表（用于 atlas 页面名的直接匹配）
+    name_index: dict[str, Path] = {}
+    for img in images:
+        name_index.setdefault(img.stem.lower(), img)
+
     result:        list[tuple[Path, str]]          = []
     used_in_atlas: set[Path]                       = set()
     img_cache:     dict[Path, Image.Image | None]  = {}
@@ -478,7 +526,15 @@ def find_images_for_atlas(
             page_size    = page["size"]
             page_regions = page["regions"]
             page_image   = page["image"]          # atlas 记载的文件名，如 "char0.png"
-            max_score    = min(10, len(page_regions))
+            max_score    = min(20, len(page_regions))  # 主分上限（int）
+
+            # --- 优先用 atlas 记载的文件名直接匹配 ---
+            page_stem = Path(page_image).stem.lower()
+            direct = name_index.get(page_stem)
+            if direct is not None and direct in images_set and direct not in used_in_atlas:
+                result.append((direct, page_image))
+                used_in_atlas.add(direct)
+                continue
 
             # --- 候选筛选 ---
             if page_size is not None and size_index is not None:
@@ -498,8 +554,20 @@ def find_images_for_atlas(
                 candidates = [img for img in images if img not in used_in_atlas]
 
             if not candidates:
-                # 尺寸不匹配时回退：对所有剩余图像打分，不依赖 size 过滤
-                candidates = [img for img in images if img not in used_in_atlas]
+                # 先尝试分辨率缩放变体（×0.5 / ×2），再全量回退
+                if page_size is not None and size_index is not None:
+                    w, h = page_size
+                    for try_size in [(w * 2, h * 2), (w // 2, h // 2),
+                                     (w * 4, h * 4), (w // 4, h // 4)]:
+                        scaled = [
+                            img for img in size_index.get(try_size, [])
+                            if img in images_set and img not in used_in_atlas
+                        ]
+                        if scaled:
+                            candidates = scaled
+                            break
+                if not candidates:
+                    candidates = [img for img in images if img not in used_in_atlas]
                 if not candidates:
                     continue
                 print(f"    [WARN] {atlas_path.name}: page '{page_image}' "
@@ -509,16 +577,16 @@ def find_images_for_atlas(
             if len(candidates) == 1 or not page_regions:
                 matched = candidates[0]
             else:
-                best_img, best_score = None, -1
+                best_img, best_p, best_s = None, -1, -1.0
                 for img_path in candidates:
                     im = _open(img_path)
                     if im is None:
                         continue
-                    score = _count_valid_crops(im, page_regions)
-                    if score > best_score:
-                        best_score = score
-                        best_img   = img_path
-                    if best_score == max_score:
+                    p, s = _score_crops(im, page_regions)
+                    # 两级比较：主分（二进制计数） > 副分（alpha 密度 tiebreaker）
+                    if p > best_p or (p == best_p and s > best_s):
+                        best_p, best_s, best_img = p, s, img_path
+                    if best_p == max_score:
                         break
                 matched = best_img if best_img is not None else candidates[0]
 
@@ -629,16 +697,21 @@ def main():
                     remaining_images = [img for img in remaining_images if img != matched_img]
 
         # 汇总本组所有文件及目标文件名
-        # skel / atlas 重命名为 base_name；图像重命名为 atlas 记载名
+        # skel  → {base_name}.json 或 {base_name}.skel（按实际内容）
+        # atlas → {base_name}.atlas
+        # image → {atlas记载stem}.png 或 .webp（按文件头）
         files_to_copy: list[tuple[Path, str]] = []
         if skel:
-            new_name = f"{base_name}{skel.suffix}" if base_name else skel.name
+            skel_ext = ".json" if is_json(skel) else ".skel"
+            new_name = f"{base_name}{skel_ext}" if base_name else skel.name
             files_to_copy.append((skel, new_name))
         for atl in group_atlases:
-            new_name = f"{base_name}{atl.suffix}" if base_name else atl.name
+            new_name = f"{base_name}.atlas" if base_name else atl.name
             files_to_copy.append((atl, new_name))
         for img_path, img_dest in group_images:
-            files_to_copy.append((img_path, img_dest))
+            img_ext  = _real_img_ext(img_path)
+            img_name = Path(img_dest).stem + img_ext
+            files_to_copy.append((img_path, img_name))
 
         print(f"    -> {dest_dir.name}/  ({len(files_to_copy)} 个文件)")
         for src, dst_name in files_to_copy:
@@ -657,12 +730,17 @@ def main():
     if leftover:
         print(f"\n    未匹配图像 ({len(leftover)} 个):")
         for img in leftover:
-            print(f"       {img.name}")
+            img_ext  = _real_img_ext(img)
+            img_name = img.stem + img_ext
+            rename_hint = f"  →  {img_name}" if img_name != img.name else ""
+            print(f"       {img.name}{rename_hint}")
         if not DRY_RUN:
             leftover_dir = output_path / "_unmatched_images"
             leftover_dir.mkdir(parents=True, exist_ok=True)
             for img in leftover:
-                shutil.copy2(img, leftover_dir / img.name)
+                img_ext  = _real_img_ext(img)
+                img_name = img.stem + img_ext
+                shutil.copy2(img, leftover_dir / img_name)
 
     if DRY_RUN:
         print("\n[DRY_RUN=True] 以上为预览，未实际写入文件。")

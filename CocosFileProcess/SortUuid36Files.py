@@ -51,7 +51,7 @@ def compress_uuid(full_uuid: str) -> str:
 
 
 
-# 1️⃣ 构建映射表 uuid22 -> 原始路径
+# 构建映射表 uuid22 -> 原始路径
 with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
@@ -68,7 +68,7 @@ for uuidIndex, path in paths_dict.items(): # <uuidIndex, path>
 
 print(f"[INFO] 映射表生成完成，共 {len(uuid22_to_path)} 条映射")
 
-# 2️⃣ 遍历待分类文件
+# 遍历待分类文件
 not_found_files = []
 
 for root, dirs, files in os.walk(INPUT_DIR):

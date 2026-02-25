@@ -1,11 +1,9 @@
-import os
 import json
-import glob
 from pathlib import Path
 
 # 自动根据现有motions textures physics重构/生成 model3配置
 
-INPUT_DIR = r"C:\Users\86182\Downloads\Telegram Desktop\Live2DOutput"
+INPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D - bak"
 
 def main():
     print("开始查找 Live2D 模型...")
