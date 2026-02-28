@@ -1,0 +1,30 @@
+[{
+  "api_base_url": "https://wsgw.keyses.cn",
+  "charge_url": "https://m.msb4mx.com",
+  "charge_url_2": "https://mon4m.msb4m2.com",
+  "charge_url_3": "https://mon4m.msb9y4.com",
+  "web_url": "https://mon7m-cz-07.bjq-app003.com",
+  "charge_url_h5": "https://mon4m.msba8e.com",
+  "charge_url_badger": "https://sdk-badger.wjgelbub.com",
+  "WEB_CHARGE": "/virtualCoin",
+  "WEB_PROPS": "/game-item-purchase",
+  "WEB_PURCHASE": "/game-purchase",
+  "no_confirmation_max_payments": "100",
+  "no_confirmation_num_per": "2000",
+  "web_sdk_js_url": "https://mon51.bjq-sdk3.com/web_sdk/dist-prod/GcpWebSdk.min.js",
+  "web_sdk_css_url": "https://mon51.bjq-sdk3.com/web_sdk/dist-prod/GcpWebSdk.min.css",
+  "check_status_pre_frame": "2000",
+  "clientVersion": "v214",
+  "tglink": "https://t.me/MasobuTG",
+  "xlink": "https://x.com/masobu_game",
+  "dclink": "https://discord.gg/Y6FGbCcFhv",
+  "lifflink": "https://liff.line.me/1645278921-kWRPP32q/?accountId=279wqjck"
+},
+{
+  "id": "resource_link",
+  "data": "https://masobu-center.eepgames.com"
+},
+{
+  "id": "api_link",
+  "data": "https://api.eepgames.com"
+}]
