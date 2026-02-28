@@ -3,42 +3,40 @@ import json
 import re
 from pathlib import Path
 
-INPUT_PATH = r"C:\Users\86182\Downloads\TEMP"
-OUTPUT_PATH = r"C:\Users\86182\Downloads\OUTPUT"
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Test"
+OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Output"
 
-FADE_REGEX = re.compile(r'.*\.fade(\s*@-?\d+)?\.json$')  # 匹配 .fade.json 或 .fade @xxxx.json
+FADE_REGEX = re.compile(r'.*\.fade(\s*[#@]-?\d+)?\.json$')  # 匹配 .fade.json 或 .fade @xxxx.json 或 .fade #xxxx.json
 IsHash = False
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 
-def convert_to_bezier(curve):
+def convert_segments(curve):
     """
-    将线性曲线点列表转换为贝塞尔形式
-    curve: [{"time": ..., "value": ...}, ...]
-    输出 segments: [time, value, inTangent, outTangent, time, value, ...]
+    每个点依次写入 [time, value, weightedMode]，最后移除末尾 weightedMode。
+    输出长度为 3*n-1（n>=1），空曲线输出空列表。
     """
     segments = []
-    n = len(curve)
-    for i, pt in enumerate(curve):
-        time = pt.get("time", 0)
-        value = pt.get("value", 0)
-        if n == 1:
-            inT = outT = 0
-        elif i == 0:
-            next_pt = curve[i+1]
-            outT = (next_pt["value"] - value) / max(next_pt["time"] - time, 1e-6)
-            inT = 0
-        elif i == n-1:
-            prev_pt = curve[i-1]
-            inT = (value - prev_pt["value"]) / max(time - prev_pt["time"], 1e-6)
-            outT = 0
-        else:
-            prev_pt = curve[i-1]
-            next_pt = curve[i+1]
-            inT = (value - prev_pt["value"]) / max(time - prev_pt["time"], 1e-6)
-            outT = (next_pt["value"] - value) / max(next_pt["time"] - time, 1e-6)
-        segments.extend([time, value, inT, outT])
+    for pt in curve:
+        segments.append(pt.get("time", 0))
+        segments.append(pt.get("value", 0))
+        segments.append(pt.get("weightedMode", 0))
+
+    if segments:
+        segments.pop()
+
     return segments
+
+
+def build_output_path(output_root, obj, fallback_file_name):
+    motion_name = str(obj.get("MotionName", "")).strip()
+    if motion_name:
+        motion_name = motion_name.replace("\\", "/").lstrip("/")
+        normalized = os.path.normpath(motion_name)
+        if not os.path.isabs(normalized) and not normalized.startswith(".."):
+            return Path(output_root) / normalized
+
+    return Path(output_root) / f"{fallback_file_name}.motion3.json"
 
 def process_fade_files(dir_path):
     for root, dirs, files in os.walk(dir_path):
@@ -73,10 +71,11 @@ def process_fade_files(dir_path):
             param_ids = obj.get("ParameterIdHashes") if IsHash else obj.get("ParameterIds", [])
 
             for i, curve_obj in enumerate(obj.get("ParameterCurves", [])):
-                segments = convert_to_bezier(curve_obj.get("m_Curve", []))
+                curve = curve_obj.get("m_Curve", [])
+                segments = convert_segments(curve)
                 total_segment_count += len(curve_obj.get("m_Curve", []))
-                if segments:
-                    max_time = max(max_time, curve_obj.get("m_Curve", [])[-1].get("time", 0))
+                if curve:
+                    max_time = max(max_time, curve[-1].get("time", 0))
                 motion3_json["Curves"].append({
                     "Target": "Parameter",
                     "Id": param_ids[i] if i < len(param_ids) else "",
@@ -88,7 +87,8 @@ def process_fade_files(dir_path):
             motion3_json["Meta"]["TotalSegmentCount"] = total_segment_count
             motion3_json["Meta"]["TotalPointCount"] = len(param_ids) + total_segment_count
 
-            out_path = os.path.join(Path(OUTPUT_PATH), f"{file_name}.motion3.json")
+            out_path = build_output_path(OUTPUT_PATH, obj, file_name)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(motion3_json, f, ensure_ascii=False, indent=4)

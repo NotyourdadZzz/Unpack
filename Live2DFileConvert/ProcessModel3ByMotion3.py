@@ -3,7 +3,7 @@ from pathlib import Path
 
 # 自动根据现有motions textures physics重构/生成 model3配置
 
-INPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D - bak"
+INPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D"
 
 def main():
     print("开始查找 Live2D 模型...")

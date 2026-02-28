@@ -10,7 +10,7 @@ import re
 import shutil
 
 INPUT_PATH = r"C:\Users\86182\Downloads\OUTPUT"
-OUTPUT_PATH = r"C:\Users\86182\Downloads\output1"
+OUTPUT_PATH = r"C:\Users\86182\Downloads\output"
 DRY_RUN = False
 
 os.makedirs(OUTPUT_PATH, exist_ok=True)
