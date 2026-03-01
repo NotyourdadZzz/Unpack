@@ -8,7 +8,7 @@ GameCreator image_decrypt 还原脚本
 import os
 import math
 
-INPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Live2D\MeteoriteFall (LuoXing)\live2d"
+INPUT_DIR = r"D:\SteamLibrary\steamapps\common\METEORITEFALL\Game\asset"
 
 # NPG 加密头：PNG 头的 data[1] data[2] 被交换
 # 正常 PNG：89 50 4E 47

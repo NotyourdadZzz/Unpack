@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-
+# 作用： 根据 atlas 文件内容整理 spine 相关文件（atlas、skel/json、png）到同名目录
 import shutil
 from pathlib import Path
 from typing import Set
 
 # === 配置 ===
+INPUT_PATH = r"D:\Test\hotRes\Output"
 DRYRUN = False   # True = 仅显示,不移动;False = 执行移动
-TARGET_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\output\TMP"  # ← 目标目录(改成你的路径)
 # ============
 
 def parse_atlas_pngs(atlas_path: Path) -> Set[str]:
@@ -21,7 +21,7 @@ def parse_atlas_pngs(atlas_path: Path) -> Set[str]:
 
 
 def main():
-    src_dir = Path(TARGET_DIR).resolve()
+    src_dir = Path(INPUT_PATH).resolve()
     print(f"[INFO] 工作目录: {src_dir}")
 
     atlas_files = list(src_dir.glob("*.atlas"))

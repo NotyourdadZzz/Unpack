@@ -1,5 +1,5 @@
 //frida -Uf jp.glee.girl -l DumpMetadata.js
-
+// 这个还挺好用 jp.glee.girl 是包名 -U 是连接 USB 设备 -f 是启动应用 -n 是附加到正在运行的应用 -l 是加载脚本
 var dumped = false;
 
 function guess_metadata_size(base, rangeSize) {
