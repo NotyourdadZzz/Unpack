@@ -2,25 +2,23 @@ import zlib
 import xxtea
 from pathlib import Path
 
-INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\SuperDemension"
+INPUT_PATH = r"C:\Users\86182\Downloads"
 
+KEY = b"\x24\xfa\x49\x9b\x10\x8d\x62\x59\x29\x26\x81\x67\x4b\xf7\x91\xeb"
+_MAGIC = bytes([12,7,8,13,11,9])
 
-_MAGIC = b"\x0c\x07\x08\x0d\x0b\x09"
 def decrypt(i, o):
     with open(i, "rb") as f:
         enc = f.read()
-
+    
     ed = enc[len(_MAGIC):]
+    dec = xxtea.decrypt(ed, KEY, padding=False)
+    real_len = int.from_bytes(dec[-4:], "little")
+    dec = dec[:real_len]
+    compressed = dec[1:]
+    result = zlib.decompress(compressed)
     with open(o, "wb") as f:
-        f.write(
-            zlib.decompress(
-                xxtea.decrypt(
-                    ed + b"\x00" * ((4 - (len(ed) % 4)) % 4),
-                    b"\x24\xfa\x49\x9b\x10\x8d\x62\x59\x29\x26\x81\x67\x4b\xf7\x91\xeb",
-                    padding=False,
-                )[1:]
-            )
-        )
+        f.write(result)
 
 def main():
     root = Path(INPUT_PATH)
