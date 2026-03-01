@@ -3,7 +3,7 @@ GameCreator image_decrypt 还原脚本
 算法：
   1. 交换 data[1] 与 data[2]
   2. 删除索引 floor((len-1)*0.5) 处的字节
-  3. 剩余数据即为合法图片文件（PNG/JPG 等）
+  3. 剩余数据即为合法图片文件
 """
 import os
 import math
