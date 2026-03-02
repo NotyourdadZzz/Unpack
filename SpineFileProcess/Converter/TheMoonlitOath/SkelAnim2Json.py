@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 仅用于从花亦山手游的二进制骨骼文件和外部 .spineani 文件中提取动画数据，并转换为 JSON 格式。
+# 仅用于从 The Moonlit Oath 花亦山心之月 手游的二进制骨骼文件和外部 .spineani 文件中提取动画数据，并转换为 JSON 格式。
 import os, glob, json, struct
 from Skel2Json import (
     read_binary_skeleton,
