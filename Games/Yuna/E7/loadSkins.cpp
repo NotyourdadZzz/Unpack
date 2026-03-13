@@ -390,10 +390,13 @@ spine::v3::Skin *__fastcall spine::v3::SkeletonDataLoader::loadSkins(
     *(_QWORD *)(*((_QWORD *)v4 + 16) + 8 * v9++) = 0;
     v11 = *((_QWORD *)v4 + 14);
   }
+// -----
+
   if ( (_DWORD)v318 )
   {
     v319 = 0;
     v321 = v4;
+
     while ( 1 )
     {
       v16 = *((_QWORD *)this + 14);
@@ -582,6 +585,8 @@ LABEL_209:
         goto LABEL_212;
     }
     v58 = 0;
+
+//----- slot index
     while ( 1 )
     {
       v59 = *((_QWORD *)this + 14);
@@ -599,6 +604,8 @@ LABEL_209:
       v66 = v64 + 4;
       v322 = v60;
       *((_QWORD *)this + 14) = v66;
+
+// if offset is not -1, read string
       if ( (_DWORD)v65 != -1 )
       {
         v67 = (char *)this + 121;
@@ -615,12 +622,16 @@ LABEL_209:
           v347 = 1;
         }
       }
+
+
+//----- type
       n3 = *(unsigned __int16 *)(v63 + v66);
       endptr_3 = endptr;
       *((_QWORD *)this + 14) = v66 + 2;
       v341 = 0;
       v342 = 0;
       v343 = 0;
+//----- path_name_offset
       v71 = *(unsigned int *)(v63 + v66 + 2);
       *((_QWORD *)this + 14) = v66 + 6;
       if ( (_DWORD)v71 != -1 )
@@ -639,6 +650,9 @@ LABEL_209:
       lpsrc = 0;
       if ( n3 > 3 )
         break;
+
+// for 2 MeshAttachment and 3 linkedMeshAttachment
+// 2 MeshAttachment
       if ( (unsigned int)(n3 - 2) < 2 )
       {
         lpsrc = spine::SpineObject::operator new(
@@ -652,10 +666,12 @@ LABEL_209:
         v337[1] = 0;
         v338 = 0;
         v339 = 0;
+//mesh _read_vertex_attachment
         v79 = (spine::SpineExtension *)spine::v3::SkeletonDataLoader::assignVertexAttachment(
                                          this,
                                          (spine::v3::Attachment *)lpsrc,
                                          (spine::String *)v337);
+//floats6
         *(_DWORD *)(lpsrc + 160) = *(_DWORD *)(*((_QWORD *)this + 11) + *((_QWORD *)this + 14));
         v80 = *((_QWORD *)this + 11);
         v81 = *((_QWORD *)this + 14) + 4LL;
@@ -680,6 +696,8 @@ LABEL_209:
         v90 = *((_QWORD *)this + 14);
         v91 = *((_QWORD *)this + 11);
         *((_QWORD *)this + 14) = v90 + 4;
+
+// uv_count
         v92 = *(unsigned __int16 *)(v91 + v90 + 4);
         *((_QWORD *)this + 14) = v90 + 6;
         v93 = *(_QWORD *)(lpsrc + 208);
@@ -716,6 +734,7 @@ LABEL_209:
         v156 = *((_QWORD *)this + 11);
         v157 = *((_QWORD *)this + 14) + 4 * v92;
         *((_QWORD *)this + 14) = v157;
+// region-space verts
         v158 = *(unsigned __int16 *)(v156 + v157);
         *((_QWORD *)this + 14) = v157 + 2;
         v159 = *(_QWORD *)(lpsrc + 240);
@@ -752,6 +771,9 @@ LABEL_209:
         v169 = *((_QWORD *)this + 11);
         v170 = *((_QWORD *)this + 14) + 4 * v158;
         *((_QWORD *)this + 14) = v170;
+
+
+// triangles
         v171 = *(unsigned __int16 *)(v169 + v170);
         *((_QWORD *)this + 14) = v170 + 2;
         v172 = *(_QWORD *)(lpsrc + 272);
@@ -788,6 +810,8 @@ LABEL_209:
         v182 = *((_QWORD *)this + 11);
         v183 = *((_QWORD *)this + 14) + 2 * v171;
         *((_QWORD *)this + 14) = v183;
+
+// edges
         v184 = *(unsigned __int16 *)(v182 + v183);
         *((_QWORD *)this + 14) = v183 + 2;
         v185 = *(_QWORD *)(lpsrc + 304);
@@ -824,6 +848,8 @@ LABEL_209:
         v195 = *((_QWORD *)this + 14) + 2 * v184;
         v196 = *((_QWORD *)this + 11);
         *((_QWORD *)this + 14) = v195;
+
+// atlas region path
         v197 = *(unsigned int *)(v196 + v195);
         *((_QWORD *)this + 14) = v195 + 4;
         if ( (_DWORD)v197 == -1 )
@@ -865,6 +891,8 @@ LABEL_209:
           }
           v4 = v321;
         }
+
+// floats10
         *(_DWORD *)(lpsrc + 352) = *(_DWORD *)(*((_QWORD *)this + 11) + *((_QWORD *)this + 14));
         v224 = *((_QWORD *)this + 11);
         v225 = *((_QWORD *)this + 14) + 4LL;
@@ -905,23 +933,32 @@ LABEL_209:
         v242 = *((_QWORD *)this + 14);
         v243 = *((_QWORD *)this + 11);
         *((_QWORD *)this + 14) = v242 + 4;
+
+// read int32 v243???  maybe hull length
         LODWORD(v243) = *(_DWORD *)(v243 + v242 + 4);
         *((_QWORD *)this + 14) = v242 + 8;
         *(_DWORD *)(lpsrc + 400) = v243;
+
+// read bool v244??? flag
         v244 = *((_QWORD *)this + 14);
         LODWORD(v242) = *(unsigned __int8 *)(*((_QWORD *)this + 11) + v244);
         *((_QWORD *)this + 14) = v244 + 1;
         *(_BYTE *)(lpsrc + 404) = (_DWORD)v242 != 0;
+
+// read int32 v245???
         v245 = *((_QWORD *)this + 14);
         LODWORD(v242) = *(_DWORD *)(*((_QWORD *)this + 11) + v245);
         endptr_4 = endptr;
         *((_QWORD *)this + 14) = v245 + 4;
         *(_DWORD *)(lpsrc + 408) = v242;
+        //clean
         v246 = *((_QWORD *)this + 11);
         v247 = *((_QWORD *)this + 14);
         v334 = 0;
         src = 0;
         v336 = 0;
+
+// read string_offset  v248???
         v248 = *(unsigned int *)(v246 + v247);
         v249 = v247 + 4;
         *((_QWORD *)this + 14) = v249;
@@ -942,20 +979,27 @@ LABEL_209:
           }
         }
         n0x7530 = *((_DWORD *)this + 3);
+// read int16  v254???
         v254 = *(__int16 *)(v246 + v249);
         v255 = v249 + 2;
         *((_QWORD *)this + 14) = v249 + 2;
+    // check version (30001)  0x7530 = 30000
+    // if V3
+    // read int16
         if ( n0x7530 > 0x7530 )
         {
           LODWORD(v260) = *(__int16 *)(v246 + v255);
           v261 = v249 + 4;
           *((_QWORD *)this + 14) = v261;
         }
+    // if V2 begin
+    // read skin_name_offset if -1 use "default"
         else
         {
           p_endptr = (unsigned __int64)endptr;
           s1 = 0;
           LOBYTE(v325) = 0;
+
           v256 = *(unsigned int *)(v246 + v255);
           *((_QWORD *)this + 14) = v249 + 6;
           if ( (_DWORD)v256 == -1 )
@@ -963,6 +1007,7 @@ LABEL_209:
           v257 = (char *)this + 121;
           if ( (*((_BYTE *)this + 120) & 1) != 0 )
             v257 = (char *)*((_QWORD *)this + 17);
+
           if ( v257
             && (s1_5 = &v257[v256],
                 v259 = strlen(&v257[v256]),
@@ -1007,6 +1052,7 @@ LABEL_137:
               252);
           }
           spine::SpineObject::~SpineObject((spine::SpineObject *)&endptr_5);
+          //check skin number
           if ( *((_QWORD *)v4 + 14) )
           {
             v260 = 0;
@@ -1039,6 +1085,7 @@ LABEL_162:
           *(_QWORD *)&p_endptr = endptr;
           if ( s1_6 )
           {
+          //clean
 LABEL_164:
             if ( (v325 & 1) == 0 )
             {
@@ -1055,6 +1102,9 @@ LABEL_164:
           v246 = *((_QWORD *)this + 11);
           v261 = *((_QWORD *)this + 14);
         }
+    //end V2
+
+// read bool v277 maybe deform
         v275 = *(unsigned __int8 *)(v246 + v261);
         Region = (spine::v3::AtlasAttachmentLoader *)*((_QWORD *)this + 27);
         *((_QWORD *)this + 14) = v261 + 1;
@@ -1067,7 +1117,10 @@ LABEL_164:
           *(_QWORD *)(lpsrc + 144) = Region;
           *(_QWORD *)(lpsrc + 152) = 0;
         }
-        if ( n3 == 3 )
+//2 meshAttachment end
+
+//3 linkedMeshAttachment
+        if ( n3 == 3 ) // 3 LinkedMesh
         {
           *(_QWORD *)&p_endptr = lpsrc;
           *((_QWORD *)&p_endptr + 1) = __PAIR64__(v260, v254);
@@ -1201,6 +1254,9 @@ LABEL_164:
         spine::SpineObject::~SpineObject((spine::SpineObject *)v337);
         goto LABEL_200;
       }
+//end 3 linkedMeshAttachment
+
+//0 RegionAttachment begin
       if ( !n3 )
       {
         lpsrc = spine::SpineObject::operator new(
@@ -1402,6 +1458,9 @@ LABEL_164:
         }
         goto LABEL_200;
       }
+//0 RegionAttachment end
+
+//1 BoundingBoxAttachment
       if ( n3 == 1 )
       {
         lpsrc = spine::SpineObject::operator new(
@@ -1466,7 +1525,8 @@ LABEL_200:
       if ( ++v58 == v320 )
         goto LABEL_209;
     }
-    switch ( n3 )
+//4 5 6
+    switch ( n3 ) //4 5 6 
     {
       case 4:
         lpsrc = spine::SpineObject::operator new(
@@ -1576,6 +1636,7 @@ LABEL_200:
       default:
         goto LABEL_200;
     }
+
 LABEL_116:
     (*(void (__fastcall **)(__int64, __int64))(*(_QWORD *)v75 + 72LL))(v75, lpsrc);
     goto LABEL_200;
