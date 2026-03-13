@@ -91,7 +91,7 @@ def fix_in_place(file_path: Path, make_backup: bool) -> bool:
 
 
 def main(make_backup: bool):
-    root = Path(".")
+    root = Path("..")
     exts = {".unitypackage", ".asset", ".bundle", ".ab", ".assets",
             ".ress", ".resource", ".res", ".bin", ".dat", ".bytes",
             ".decrypted", ""}
