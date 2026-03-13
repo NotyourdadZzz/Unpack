@@ -94,8 +94,6 @@ def base64_to_uint64(s: str) -> int:
     # pad to valid length
     padding = "=" * ((4 - len(s) % 4) % 4)
     data = base64.b64decode(s + padding)
-    # tolerate malformed/short hashes by interpreting whatever bytes we get
-    # as a little-endian unsigned integer (C++ implementation accumulates byte-wise)
     return int.from_bytes(data, byteorder="little", signed=False)
 
 
