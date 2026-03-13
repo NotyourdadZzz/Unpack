@@ -1,9 +1,9 @@
 import os
 import UnityPy
 
-key_hex = "494e484a6e68647970716b3534377864"
-input_dir = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\RES"
-output_dir = r"D:\Tools\UsefulTools\MuMu\Shared\Download\花亦山\DEC"
+key_hex = "3531342f776564736a6a686662233076"
+input_dir = r"C:\Users\86182\Downloads\momentris\file\tes"
+output_dir = r"C:\Users\86182\Downloads\momentris\file\output"
 
 key_bytes = bytes.fromhex(key_hex)
 UnityPy.set_assetbundle_decrypt_key(key_bytes)
