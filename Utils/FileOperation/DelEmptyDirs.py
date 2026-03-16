@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 def main():
-    current_dir = Path(".").resolve()
+    current_dir = Path("../..").resolve()
     print(f"扫描空目录: {current_dir}")
     
     empty_dirs = []
