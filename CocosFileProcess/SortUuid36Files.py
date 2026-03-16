@@ -6,9 +6,10 @@ from pathlib import Path
 
 
 # ---------- 配置 ----------
-CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\config1.json")      # config.json 路径
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\Res")               # 待分类文件根目录
-OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\output")             # 输出目录
+CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\config.json")      # config.json 路径
+
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\native")               # 待分类文件根目录
+OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\Output")             # 输出目录
 # --------------------------
 
 
@@ -49,59 +50,61 @@ def compress_uuid(full_uuid: str) -> str:
     return compressed + suffix_part
 
 
+def main():
+    # 构建映射表 uuid22 -> 原始路径
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        config = json.load(f)
 
+    uuid22_to_path = {}
+    uuids = config.get("uuids", [])
+    paths_dict = config.get("paths", {})
 
-# 构建映射表 uuid22 -> 原始路径
-with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-    config = json.load(f)
+    for uuidIndex, path in paths_dict.items():  # <uuidIndex, path>
+        idx = int(uuidIndex)
+        path_str = path[0]  # 原始资源路径
+        if idx < len(uuids):
+            uuid22 = uuids[idx]
+            uuid22_to_path[uuid22] = path_str
 
-uuid22_to_path = {}
-uuids = config.get("uuids", [])
-paths_dict = config.get("paths", {})
+    print(f"[INFO] 映射表生成完成，共 {len(uuid22_to_path)} 条映射")
 
-for uuidIndex, path in paths_dict.items(): # <uuidIndex, path>
-    idx = int(uuidIndex)
-    path_str = path[0]  # 原始资源路径
-    if idx < len(uuids):
-        uuid22 = uuids[idx]
-        uuid22_to_path[uuid22] = path_str
+    # 遍历待分类文件
+    not_found_files = []
 
-print(f"[INFO] 映射表生成完成，共 {len(uuid22_to_path)} 条映射")
+    for root, dirs, files in os.walk(INPUT_DIR):
+        for file in files:
+            name, ext = os.path.splitext(file)
+            ext = ext.lower()
 
-# 遍历待分类文件
-not_found_files = []
+            if len(name) >= 36:
+                uuid22 = compress_uuid(name)
+            else:  # <36
+                uuid22 = name
 
-for root, dirs, files in os.walk(INPUT_DIR):
-    for file in files:
-        name, ext = os.path.splitext(file)
-        ext = ext.lower()
+            if uuid22 not in uuid22_to_path:
+                not_found_files.append(file)
+                continue
 
-        if len(name) >= 36:
-            uuid22 = compress_uuid(name)
-        else:#<36
-            uuid22 = name     
+            orig_path = uuid22_to_path[uuid22]
+            dir_path, logical_name = os.path.split(orig_path)
+            target_dir = OUTPUT_DIR / dir_path
+            target_dir.mkdir(parents=True, exist_ok=True)
 
-        if uuid22 not in uuid22_to_path:
-            not_found_files.append(file)
-            continue
+            src_file = Path(root) / file
 
-        orig_path = uuid22_to_path[uuid22]
-        dir_path, logical_name = os.path.split(orig_path)
-        target_dir = OUTPUT_DIR / dir_path
-        target_dir.mkdir(parents=True, exist_ok=True)
+            # if ext == ".bin" :
+            #     ext = ".skel"
 
-        src_file = Path(root) / file
+            dst_file = target_dir / f"{logical_name}{ext}"
 
-        if ext == ".bin":
-            ext = ".skel"
+            # shutil.copy2(src_file, dst_file)  # 保留原文件
+            shutil.move(src_file, dst_file)
 
-        dst_file = target_dir / f"{logical_name}{ext}"
+    print(f"[INFO] 分类完成，{len(not_found_files)} 个文件未找到映射")
+    if not_found_files:
+        print("[WARN] 未找到映射的文件列表：")
+        for f in not_found_files:
+            print(" ", f)
 
-        # shutil.copy2(src_file, dst_file)  # 保留原文件
-        shutil.move(src_file, dst_file)
-
-print(f"[INFO] 分类完成，{len(not_found_files)} 个文件未找到映射")
-if not_found_files:
-    print("[WARN] 未找到映射的文件列表：")
-    for f in not_found_files:
-        print(" ", f)
+if __name__ == "__main__":
+    main()
