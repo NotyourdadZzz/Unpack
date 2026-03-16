@@ -7,7 +7,8 @@ from pathlib import Path
 # === 配置项 ===
 # True = 仅显示操作，不执行任何移动操作 (建议先使用 DRYRUN 模式！)
 # False = 实际执行文件移动
-DRYRUN = False 
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\native"
+DRYRUN = False
 
 # 提取文件存放的目标目录名称 
 # 所有找到的文件都将被移动到此目录中
@@ -15,7 +16,7 @@ TARGET_DIR_NAME = "_extracted_files"
 
 def main():
     # 获取当前工作目录
-    src_dir = Path(".").resolve()
+    src_dir = Path(INPUT_PATH).resolve()
     target_dir = src_dir / TARGET_DIR_NAME
     
     print(f"==================================================")
