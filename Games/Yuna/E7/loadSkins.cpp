@@ -358,6 +358,7 @@ spine::v3::Skin *__fastcall spine::v3::SkeletonDataLoader::loadSkins(
   v355 = *(_QWORD *)(_ReadStatusReg(TPIDR_EL0) + 40);
   *((_QWORD *)a2 + 17) = 0;
   v6 = *((_QWORD *)this + 14);
+// Read the number of skins
   v7 = *(unsigned __int16 *)(*((_QWORD *)this + 11) + v6);
   *((_QWORD *)this + 14) = v6 + 2;
   v9 = *((_QWORD *)a2 + 14);

@@ -271,6 +271,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
     *((_QWORD *)this + 14) = v21 + 2;
     switch ( v22 )
     {
+//Rotate
       case 0:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -278,6 +279,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
                 649);
         v24 = (spine::SpineExtension *)spine::v3::RotateTimeline::RotateTimeline((spine::v3::RotateTimeline *)v23, 1);
         goto LABEL_36;
+ //Translate
       case 1:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -287,6 +289,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
                                          (spine::v3::TranslateTimeline *)v23,
                                          1);
         goto LABEL_48;
+//Scale
       case 2:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -294,6 +297,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
                 669);
         v25 = (spine::SpineExtension *)spine::v3::ScaleTimeline::ScaleTimeline((spine::v3::ScaleTimeline *)v23, 1);
         goto LABEL_48;
+//Shear
       case 3:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -301,6 +305,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
                 678);
         v25 = (spine::SpineExtension *)spine::v3::ShearTimeline::ShearTimeline((spine::v3::ShearTimeline *)v23, 1);
         goto LABEL_48;
+//Attachment
       case 4:
         v26 = (spine::v3::AttachmentTimeline *)spine::SpineObject::operator new(
                                                  80,
@@ -404,6 +409,7 @@ __int64 __fastcall spine::v3::SkeletonDataLoader::loadTimeline(
           spine::SpineObject::~SpineObject((spine::SpineObject *)&p_s1);
         }
         goto LABEL_15;
+//Color
       case 5:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -452,6 +458,7 @@ LABEL_36:
         v91 = (spine::SpineExtension *)memcpy((void *)(v62 + 4 * v63), (const void *)(v57 + v58), 4 * v55);
         *(_QWORD *)(v23 + 56) = v55;
         goto LABEL_55;
+//Deform
       case 6:
         v64 = spine::SpineObject::operator new(
                 120,
@@ -693,6 +700,7 @@ LABEL_36:
         }
         spine::SpineObject::~SpineObject((spine::SpineObject *)&p_s1);
         goto LABEL_15;
+//Event
       case 7:
         v40 = (spine::v3::EventTimeline *)spine::SpineObject::operator new(
                                             72,
@@ -774,6 +782,7 @@ LABEL_36:
           goto LABEL_15;
         v134 = 0;
         break;
+//DrawOrder
       case 8:
         v98 = (spine::v3::DrawOrderTimeline *)spine::SpineObject::operator new(
                                                 72,
@@ -900,6 +909,7 @@ LABEL_36:
           while ( v193 );
         }
         goto LABEL_15;
+//Ik
       case 9:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -909,6 +919,7 @@ LABEL_36:
                                          (spine::v3::IkConstraintTimeline *)v23,
                                          1);
         goto LABEL_48;
+//Transform
       case 10:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -919,6 +930,7 @@ LABEL_36:
                                          1);
         goto LABEL_48;
       case 11:
+//Path Position
         v23 = spine::SpineObject::operator new(
                 80,
                 "/Users/dev/.jenkins/workspace/App-Epic7-Stove-Live/epic7/client/ur/yuna/yuna2d/spinex/v3/SCSLoader_v3.cpp",
@@ -927,6 +939,7 @@ LABEL_36:
                                          (spine::v3::PathConstraintPositionTimeline *)v23,
                                          1);
         goto LABEL_48;
+//Path Spacing
       case 12:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -936,6 +949,7 @@ LABEL_36:
                                          (spine::v3::PathConstraintSpacingTimeline *)v23,
                                          1);
         goto LABEL_48;
+//Path Mix
       case 13:
         v23 = spine::SpineObject::operator new(
                 80,
@@ -945,6 +959,7 @@ LABEL_36:
                                          (spine::v3::PathConstraintMixTimeline *)v23,
                                          1);
         goto LABEL_48;
+//TwoColor
       case 14:
         v23 = spine::SpineObject::operator new(
                 80,

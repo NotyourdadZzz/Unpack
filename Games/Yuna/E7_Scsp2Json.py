@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional, Tuple
 # ==============================
 # Config
 # ==============================
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\c1095.scsp"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\test\c1095.json"
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\c5110.scsp"
+OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\test\c5110.json"
 ENDIAN = "<"
 
 string_pool: bytes = b""
@@ -399,7 +399,7 @@ class EventTimeline(TimelineData): # 7 time name
     names: List[str] = field(default_factory=list)
 @dataclass
 class DrawOrderTimeline(TimelineData): # 8 time order
-    orders: List[List[int]] = field(default_factory=list)
+    orders: List[List[int]] = field(default_factory=list) # [SlotIndex, ... ]
 @dataclass
 class IKTimeline(TimelineData): # 9 time mix softness bend_direction compress stretch curve
     ik_index:int = 0
@@ -1032,7 +1032,7 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         bounding_box_data.vertices = vertices
         bounding_box_data.vertexCount = vertex_count
         data = bounding_box_data
-
+    # TODO: 目前出现的问题 都指向了 mesh
     elif attachment_type == AttachmentType.Mesh or attachment_type == AttachmentType.Linkedmesh:  # 2, 3
         mesh_data = MeshAttachment()
         linked_mesh_data = LinkedMeshAttachment()
@@ -1062,7 +1062,7 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         # 32.0, 32.0, 1.0, 1.0, 1.0, 1.0]
         floats10 = read_f32_array(reader, 10)
 
-        # TODO 不知道是什么 19 maybe hull_3length
+        # TODO 不知道是什么 maybe hull_3length
         hull_length = reader.read_u32() # maybe hull length
         # 0 flag
         _flag = reader.read_boolean()
@@ -1086,7 +1086,6 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         mesh_data.uvs = uvs
         mesh_data.triangles = triangles
         mesh_data.edges = edges
-        # TODO
         mesh_data.hullLength = hull_length
 
         r = int(floats10[6] * 255)
@@ -1098,8 +1097,8 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         mesh_data.color = Color(r, g, b, a)
         mesh_data.path = get_pool_string(path_offset)
 
+
         linked_mesh_data.parentMesh = get_pool_string(parent_mesh_name_offset)
-        # TODO 因为 skin 是一个一个读取的， 怀疑skin_index 会越界
         linked_mesh_data.skin = skin
         linked_mesh_data.deform = deform
         linked_mesh_data.color = Color(r, g, b, a)
@@ -1434,6 +1433,7 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         animations.append(anim)
 
     skeleton.animations = animations
+    print(f"Read {animation_count} animations")
 
 
 def read_binary_skeleton(data: bytes) -> SkeletonData:
@@ -1499,7 +1499,7 @@ def write_curve(curves: List[float], frame_index: int) -> Dict[str, Any]:
     return item
 
 
-def write_timeline_data(timeline: TimelineData) -> List[Dict[str, Any]]:
+def write_timeline_data(timeline: TimelineData, sk: SkeletonData) -> List[Dict[str, Any]]:
     arr: List[Dict[str, Any]] = []
     frame_count = len(timeline.times)
 
@@ -1598,7 +1598,6 @@ def write_timeline_data(timeline: TimelineData) -> List[Dict[str, Any]]:
                 # event timeline 没有曲线数据
                 arr.append(item)
             pass
-        # TODO 不确定格式 
         case DrawOrderTimeline() as t:
             for i in range(frame_count):
                 item: Dict[str, Any] = defaultdict(dict)
@@ -1606,17 +1605,24 @@ def write_timeline_data(timeline: TimelineData) -> List[Dict[str, Any]]:
                     item["time"] = t.times[i]
                 # item["order"] = t.orders[i]
                 if i < len(t.orders) and t.orders[i]:
+                    # 格式: [slotIndex, ...]
+                    order = t.orders[i]
+                    pairs = []
+
+                    for new_index, slot_index in enumerate(order):
+                        if new_index != slot_index:
+                            pairs.append((slot_index, new_index))
+
+                    pairs.sort(key=lambda x: x[0])  # 按 slotIndex 排序
+
                     offsets = []
-                    raw = t.orders[i]
-                    # raw 格式: [slotIndex, newIndex, slotIndex, newIndex, ...]
-                    for idx in range(0, len(raw), 2):
-                        if idx + 1 < len(raw):
-                            slot_idx = raw[idx]
-                            new_idx = raw[idx + 1]
-                            offsets.append({
-                                "slot": slot_idx,
-                                "offset": new_idx
-                            })
+
+                    for slot_index, new_index in pairs:
+                        offsets.append({
+                            "slot": sk.slots[slot_index].name,
+                            "offset": new_index - slot_index
+                        })
+
                     if offsets:
                         item["offsets"] = offsets
                 # draw order timeline 没有曲线数据  
@@ -1707,70 +1713,67 @@ def write_timeline_data(timeline: TimelineData) -> List[Dict[str, Any]]:
 
 def build_animation_json(anim: AnimationData, sk: SkeletonData) -> None:
     for timeline in anim.timelines:
-        obj = write_timeline_data(timeline)
-        match timeline:
-            case RotateTimeline() | TranslateTimeline() | ScaleTimeline() | ShearTimeline() as t:
-                # bones
-                bone_name = sk.bones[t.bone_index].name if 0 <= t.bone_index < len(sk.bones) else ""
-                if bone_name not in anim.bones:
-                    anim.bones[bone_name] = {}
-                type_key = {
-                    TimelineType.Rotate: "rotate",
-                    TimelineType.Translate: "translate",
-                    TimelineType.Scale: "scale",
-                    TimelineType.Shear: "shear",
-                }[t.type]
-                anim.bones[bone_name][type_key] = obj
-            case AttachmentTimeline() | ColorTimeline() | TwoColorTimeline() as t:
-                # slots
-                slot_name = sk.slots[t.slot_index].name if 0 <= t.slot_index < len(sk.slots) else ""
-                if slot_name not in anim.slots:
-                    anim.slots[slot_name] = {}
-                type_key = {
-                    TimelineType.Attachment: "attachment",
-                    TimelineType.Color: "color",
-                    TimelineType.TwoColor: "twoColor",
-                }[t.type]
-                anim.slots[slot_name][type_key] = obj
-            case DeformTimeline() as t:
-                # deform
-                skin_name = t.skin if t.skin else "default"
-                slot_name = sk.slots[t.slot_index].name if 0 <= t.slot_index < len(sk.slots) else ""
-                attachment_name = t.attachment
-                if skin_name not in anim.deform:
-                    anim.deform[skin_name] = {}
-                if slot_name not in anim.deform[skin_name]:
-                    anim.deform[skin_name][slot_name] = {}
-                anim.deform[skin_name][slot_name][attachment_name] = obj
-            case EventTimeline():
-                # events
-                anim.events = obj
-            case DrawOrderTimeline():
-                # drawOrder
-                anim.drawOrder = obj
-            case IKTimeline() as t:
-                # ik
-                ik_name = sk.ikConstraints[t.ik_index].name if 0 <= t.ik_index < len(sk.ikConstraints) else ""
-                anim.ik[ik_name] = obj
-            case TransformTimeline() as t:
-                # transform
-                transform_name = sk.transformConstraints[t.transform_index].name if 0 <= t.transform_index < len(sk.transformConstraints) else ""
-                anim.transform[transform_name] = obj
-            case PathPositionTimeline() | PathSpacingTimeline() | PathMixTimeline() as t:
-                # path
-                path_name = sk.pathConstraints[t.path_index].name if 0 <= t.path_index < len(sk.pathConstraints) else ""
-                if path_name not in anim.path:
-                    anim.path[path_name] = {
-                        "position": [],
-                        "spacing": [],
-                        "mix": []
-                    }
-                type_key = {
-                    TimelineType.PathConstraintPosition: "position",
-                    TimelineType.PathConstraintSpacing: "spacing",
-                    TimelineType.PathConstraintMix: "mix",
-                }[t.type]
-                anim.path[path_name][type_key] = obj
+        obj = write_timeline_data(timeline, sk)
+        if obj:
+            match timeline:
+                case RotateTimeline() | TranslateTimeline() | ScaleTimeline() | ShearTimeline() as t:
+                    # bones
+                    bone_name = sk.bones[t.bone_index].name if 0 <= t.bone_index < len(sk.bones) else ""
+                    if bone_name not in anim.bones:
+                        anim.bones[bone_name] = {}
+                    type_key = {
+                        TimelineType.Rotate: "rotate",
+                        TimelineType.Translate: "translate",
+                        TimelineType.Scale: "scale",
+                        TimelineType.Shear: "shear",
+                    }[t.type]
+                    anim.bones[bone_name][type_key] = obj
+                case AttachmentTimeline() | ColorTimeline() | TwoColorTimeline() as t:
+                    # slots
+                    slot_name = sk.slots[t.slot_index].name if 0 <= t.slot_index < len(sk.slots) else ""
+                    if slot_name not in anim.slots:
+                        anim.slots[slot_name] = {}
+                    type_key = {
+                        TimelineType.Attachment: "attachment",
+                        TimelineType.Color: "color",
+                        TimelineType.TwoColor: "twoColor",
+                    }[t.type]
+                    anim.slots[slot_name][type_key] = obj
+                case DeformTimeline() as t:
+                    # deform
+                    skin_name = t.skin if t.skin else "default"
+                    slot_name = sk.slots[t.slot_index].name if 0 <= t.slot_index < len(sk.slots) else ""
+                    attachment_name = t.attachment
+                    if skin_name not in anim.deform:
+                        anim.deform[skin_name] = {}
+                    if slot_name not in anim.deform[skin_name]:
+                        anim.deform[skin_name][slot_name] = {}
+                    anim.deform[skin_name][slot_name][attachment_name] = obj
+                case EventTimeline():
+                    # events
+                    anim.events = obj
+                case DrawOrderTimeline():
+                    # drawOrder
+                    anim.drawOrder = obj
+                case IKTimeline() as t:
+                    # ik
+                    ik_name = sk.ikConstraints[t.ik_index].name if 0 <= t.ik_index < len(sk.ikConstraints) else ""
+                    anim.ik[ik_name] = obj
+                case TransformTimeline() as t:
+                    # transform
+                    transform_name = sk.transformConstraints[t.transform_index].name if 0 <= t.transform_index < len(sk.transformConstraints) else ""
+                    anim.transform[transform_name] = obj
+                case PathPositionTimeline() | PathSpacingTimeline() | PathMixTimeline() as t:
+                    # path
+                    path_name = sk.pathConstraints[t.path_index].name if 0 <= t.path_index < len(sk.pathConstraints) else ""
+                    if path_name not in anim.path:
+                        anim.path[path_name] = {}
+                    type_key = {
+                        TimelineType.PathConstraintPosition: "position",
+                        TimelineType.PathConstraintSpacing: "spacing",
+                        TimelineType.PathConstraintMix: "mix",
+                    }[t.type]
+                    anim.path[path_name][type_key] = obj
     
            
     
