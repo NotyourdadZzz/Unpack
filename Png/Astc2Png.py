@@ -7,11 +7,12 @@ import gzip, io, zlib
 # astc: 解 gzip / ccz → beeplay → astcenc → png（原地）
 
 # ===== 固定参数 =====
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\jbks-res\output\UI_new\YYHD_yyhd")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue")
 
+# 如果只是普通的 astc 文件, 下面的参数无影响, 会自动跳过
 SIGNATURE = b"beeplay"
 XOR_KEY   = 0x17
-ASTCENC   = r"astcenc.exe"
+ASTCENC   = r"astcenc.exe" # astcenc.exe 的路径, 已添加到环境变量则直接写 "astcenc.exe", 否则写完整路径
 MODE      = "l"
 # ====================
 
@@ -50,7 +51,7 @@ for src in INPUT_DIR.rglob("*"):
     suffix = src.suffix.lower()
 
     # -------- 只处理 astc --------
-    if suffix != ".astc":
+    if suffix != ".astc": # 有的文件压缩了或者被加密了, 所以不能通过魔数来判断
         continue
 
     try:
@@ -62,7 +63,7 @@ for src in INPUT_DIR.rglob("*"):
         elif is_gzip(data):
             data = inflate_gzip(data)
 
-        # 解密 beeplay
+        # 解密 beeplay, 没有会自动跳过
         data = decrypt_beeplay(data)
 
         # 临时 astc（覆盖原文件）
