@@ -10,7 +10,7 @@ from datetime import datetime
 # ========== 配置区 ==========
 BASE_URL    = "http://kanojo-jp-cdncf.y2sgames.com/kanojo-jp"
 CHECK_FILE  = "hot_file_list.dat"
-OUTPUT_DIR  = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\Network\Data"
+OUTPUT_DIR  = r"/Utils/Network/Data"
 OUTPUT_LOG  = os.path.join(OUTPUT_DIR, "VERSION.log")
 
 # 起始版本（用于确定前缀段）

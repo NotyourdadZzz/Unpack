@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Set
 
 # === 配置 ===
-INPUT_PATH = r"D:\Test\hotRes\Output"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\Output\actor\show"
+
 DRYRUN = False   # True = 仅显示,不移动;False = 执行移动
 # ============
 
