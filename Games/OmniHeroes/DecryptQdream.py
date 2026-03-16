@@ -2,7 +2,7 @@ import os
 import struct
 import hashlib
 from pathlib import Path
-
+# 用于解密 OmniHeroes 女武神契约 的 PNG/ASTC 文件的 QDREAM 加密
 INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue"
 
 ASTC_MAGIC = b"\x13\xAB\xA1\x5C"
