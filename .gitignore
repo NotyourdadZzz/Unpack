@@ -57,3 +57,4 @@ debug/
 temp/
 test/
 node_modules/
+/SpineFileProcess/Converter/Data
