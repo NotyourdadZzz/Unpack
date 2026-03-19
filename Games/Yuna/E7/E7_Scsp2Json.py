@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import struct
-import sys
+from pathlib import Path
 import lz4.block
-
 from dataclasses import dataclass, field
 from collections import defaultdict
 from enum import IntEnum
@@ -17,19 +17,18 @@ from typing import Any, Dict, List, Optional, Tuple
 # ==============================
 # Config
 # ==============================
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\c5110.scsp"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\test\c5110.json"
-ENDIAN = "<"
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data"
+OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data"
 
-string_pool: bytes = b""
+
+IS_COMPRESS_JSON = True
+ENDIAN = "<"
 # ==============================
 # Enums & helpers
 # ==============================
 class ScspVersion(IntEnum):
     V2 = 1 #2.1.27
     V3 = 30001 #3.8.99
-
-scsp_version: ScspVersion = ScspVersion.V3
 
 class Inherit(IntEnum):
     Normal = 0
@@ -130,9 +129,20 @@ def base64_to_uint64(s: str) -> int:
 # ==============================
 # Data classes
 # ==============================
+@dataclass
+class Attachment:
+    name: Optional[str] = None
+    path: Optional[str] = None
+    type: AttachmentType = AttachmentType.Region
 
 @dataclass
-class RegionAttachment: # Attachment
+class VertexAttachment(Attachment):
+    vertexCount: int = 0
+    isWeighted: bool = False
+    vertices: List[float] = field(default_factory=list)
+
+@dataclass
+class RegionAttachment(Attachment): 
     x: float = 0.0
     y: float = 0.0
     rotation: float = 0.0
@@ -142,13 +152,11 @@ class RegionAttachment: # Attachment
     height: float = 0.0
     color: Optional[Color] = None
 
-
 @dataclass
-class MeshAttachment: # VertexAttachment
+class MeshAttachment(VertexAttachment): 
     uvs: List[float] = field(default_factory=list)
     triangles: List[int] = field(default_factory=list)
-    vertexCount: int = 0
-    vertices: List[float] = field(default_factory=list)
+
     hullLength: int = 0
     color: Optional[Color] = None
 
@@ -161,9 +169,8 @@ class MeshAttachment: # VertexAttachment
     # 默认值为 attachment name，如果和 attachment name 不同，则在 attachment 这一层会额外记录一个 path 字段
     path: Optional[str] = None
 
-
 @dataclass
-class LinkedMeshAttachment:
+class LinkedMeshAttachment(VertexAttachment):
     skin: Optional[str] = None
     parentMesh: Optional[str] = None
     deform: bool = True
@@ -174,16 +181,12 @@ class LinkedMeshAttachment:
 
 
 @dataclass
-class BoundingBoxAttachment: # VertexAttachment 
-    vertexCount: int = 0
-    vertices: List[float] = field(default_factory=list)
+class BoundingBoxAttachment(VertexAttachment): 
     color: Optional[Color] = None
 
 
 @dataclass
-class PathAttachment: # VertexAttachment 
-    vertexCount: int = 0
-    vertices: List[float] = field(default_factory=list)
+class PathAttachment(VertexAttachment): 
     color: Optional[Color] = None
 
     closed: bool = False
@@ -192,7 +195,7 @@ class PathAttachment: # VertexAttachment
 
 
 @dataclass
-class PointAttachment: # Attachment
+class PointAttachment(Attachment): 
     rotation: float = 0.0
     x: float = 0.0
     y: float = 0.0
@@ -200,22 +203,11 @@ class PointAttachment: # Attachment
 
 
 @dataclass
-class ClippingAttachment: # VertexAttachment
-    vertexCount: int = 0
-    vertices: List[float] = field(default_factory=list)
+class ClippingAttachment(VertexAttachment): 
     color: Optional[Color] = None
-
     endSlot: Optional[str] = None
 
 
-AttachmentData = Any
-@dataclass
-class Attachment:
-    name: Optional[str] = None
-    path: Optional[str] = None
-    type: AttachmentType = AttachmentType.Region
-    # extra data specific to attachment type, e.g. RegionAttachment, MeshAttachment, etc.
-    data: AttachmentData = None
 
 
 @dataclass
@@ -389,10 +381,10 @@ class ColorTimeline(TimelineData): # 5 time color(string) curve
     colors: List[Color] = field(default_factory=list) # r g b a 连在一起存储
 @dataclass
 class DeformTimeline(TimelineData): # 6 time vertices (offset) curve
-    # offsets: List[float]
     skin: Optional[str] = None
     slot_index: int = 0
     attachment: Optional[str] = None
+    # offsets: List[List[float]] = field(default_factory=list)
     vertices: List[List[float]] = field(default_factory=list)
 @dataclass
 class EventTimeline(TimelineData): # 7 time name 
@@ -453,6 +445,9 @@ class AnimationData: # animation_name -> type
 
 @dataclass
 class SkeletonData:
+    scspVersion: ScspVersion = ScspVersion.V3
+    stringPool: bytes = b""
+
     hash: int = 0
     hashString: Optional[str] = None
     version: Optional[str] = None
@@ -577,8 +572,9 @@ class SpineBinaryReader:
 # ==============================
 # Main reading functions
 # ==============================
-def get_pool_string(offset: int) -> Optional[str]:
+def get_pool_string(offset: int, sk: SkeletonData) -> Optional[str]:
     """从字符串池按偏移取 null-terminated UTF-8 字符串; 0xFFFFFFFF 表示 None"""
+    string_pool = sk.stringPool
     if offset == 0xFFFFFFFF:
         return None
     if offset >= len(string_pool):
@@ -695,9 +691,7 @@ def lz4_decompress(reader: SpineBinaryReader) -> None:
     )
     reader.reset_data(decompressed_data)
 
-def custom_data_preprocess (reader: SpineBinaryReader) -> None:
-    global string_pool
-    global scsp_version
+def custom_data_preprocess (reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
     lz4_decompress(reader)
 
     data_size = reader.read_u32()
@@ -709,6 +703,7 @@ def custom_data_preprocess (reader: SpineBinaryReader) -> None:
 
     if magic != b"scsp":
         raise ValueError(f"Invalid magic: {magic}")
+
     reader.reset_pos(data_start_pos)
     spine_data = reader.read_bytes(data_size)
     string_pool = reader.read_bytes(string_pool_size)
@@ -716,16 +711,19 @@ def custom_data_preprocess (reader: SpineBinaryReader) -> None:
     reader.reset_data(spine_data)
 
     if version > 2:
-        print(f"Scsp Version : V3.8.99") #30001
+        # print(f"Scsp Version : V3.8.99") #30001
         scsp_version = ScspVersion.V3
     else:
-        print(f"Scsp Version : V2.1.27") #1
+        # print(f"Scsp Version : V2.1.27") #1
         scsp_version = ScspVersion.V2
 
-def read_skeleton_info(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
-    custom_data_preprocess(reader)
+    skeleton.scspVersion = scsp_version
+    skeleton.stringPool = string_pool
 
-    # 暴力枚举前 8-73 的 f32 数据 得到疑似偏移量14 width  18 height  38 fps
+def read_skeleton_info(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
+    custom_data_preprocess(reader, skeleton)
+
+    # 枚举前 8-73 的 f32 数据 得到疑似偏移量14 width  18 height  38 fps
     # for i in range(8, 74):
     #     var = read_f32(skel_data, i)[0]
     #     print(f"  offset {i:02} = {var:.3f}")
@@ -742,16 +740,16 @@ def read_skeleton_info(reader: SpineBinaryReader, skeleton: SkeletonData) -> Non
     reader.reset_pos(74)
     hash_offset = reader.read_u32()  # 74
     ver_offset = reader.read_u32()  # 78
-    skeleton.hashString = get_pool_string(hash_offset)
+    skeleton.hashString = get_pool_string(hash_offset, skeleton)
     # if skeleton.hashString:
     #     skeleton.hash = base64_to_uint64(skeleton.hashString)
-    skeleton.version = get_pool_string(ver_offset)[:6] #3.8.99.scsp 取前 6 位
+    skeleton.version = get_pool_string(ver_offset, skeleton)[:6] #3.8.99.scsp 取前 6 位
 
     reader.reset_pos(86)
     images_offset = reader.read_u32()  # 86
     audio_offset = reader.read_u32()  # 90
-    skeleton.imagesPath = get_pool_string(images_offset)
-    skeleton.audioPath = get_pool_string(audio_offset)
+    skeleton.imagesPath = get_pool_string(images_offset, skeleton)
+    skeleton.audioPath = get_pool_string(audio_offset, skeleton)
 
     reader.reset_pos(98)
 
@@ -768,7 +766,7 @@ def read_bones(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         inherit = Inherit(reader.read_i16())
         skin_required = reader.read_boolean()
 
-        bone.name = get_pool_string(name_offset)
+        bone.name = get_pool_string(name_offset, skeleton)
         if len(bones) > parent_index >= 0:
             bone.parent = bones[parent_index].name
         elif parent_index == -1 and index != 0:
@@ -790,7 +788,7 @@ def read_bones(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         bones.append(bone)
 
     skeleton.bones = bones
-    print(f"Read {bone_count} bones")
+    # print(f"Read {bone_count} bones")
     # print(bones)
 
 def read_iks(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
@@ -812,7 +810,7 @@ def read_iks(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         bone_count = reader.read_u16()
         bone_indexes = read_i16_array(reader, bone_count)
 
-        ik.name = get_pool_string(name_offset)
+        ik.name = get_pool_string(name_offset, skeleton)
         ik.order = order
         ik.skinRequired = skin_required
         ik.bendPositive = bend_direction > 0
@@ -828,7 +826,7 @@ def read_iks(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         iks.append(ik)
 
     skeleton.ikConstraints = iks
-    print(f"Read {ik_count} IK constraints")
+    # print(f"Read {ik_count} IK constraints")
 
 def read_slots(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
     slots: List[SlotData] = []
@@ -845,16 +843,16 @@ def read_slots(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         attachment_name_offset = reader.read_u32()
         blend_mode = reader.read_u16()
 
-        slot.name = get_pool_string(name_offset)
+        slot.name = get_pool_string(name_offset, skeleton)
         slot.bone = skeleton.bones[bone_index].name if len(skeleton.bones) > bone_index >= 0 else None
         slot.color = Color(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
         slot.darkColor = Color(int(dr * 255), int(dg * 255), int(db * 255), int(da * 255)) if has_dark_color else None
-        slot.attachmentName = get_pool_string(attachment_name_offset)
+        slot.attachmentName = get_pool_string(attachment_name_offset, skeleton)
         slot.blendMode = BlendMode(blend_mode)
         slots.append(slot)
     
     skeleton.slots = slots
-    print(f"Read {slot_count} slots")
+    # print(f"Read {slot_count} slots")
     
 def read_transform_constraints(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
     tcs: List[TransformConstraintData] = []
@@ -887,7 +885,7 @@ def read_transform_constraints(reader: SpineBinaryReader, skeleton: SkeletonData
 
 
 
-        tf.name = get_pool_string(name_offset)
+        tf.name = get_pool_string(name_offset, skeleton)
         tf.order = order
         tf.skinRequired = skin_required
         tf.rotateMix = rotate_mix
@@ -910,7 +908,7 @@ def read_transform_constraints(reader: SpineBinaryReader, skeleton: SkeletonData
         tcs.append(tf)
 
     skeleton.transformConstraints = tcs
-    print(f"Read {tc_count} transform constraints")
+    # print(f"Read {tc_count} transform constraints")
 
 
 def read_path_constraints(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
@@ -939,7 +937,7 @@ def read_path_constraints(reader: SpineBinaryReader, skeleton: SkeletonData) -> 
         bone_indexes = read_i16_array(reader, bone_count)
 
 
-        path.name = get_pool_string(name_offset)
+        path.name = get_pool_string(name_offset, skeleton)
         path.order = order
         path.skinRequired = skin_required
         path.positionMode = PositionMode(positive_mode)
@@ -959,7 +957,7 @@ def read_path_constraints(reader: SpineBinaryReader, skeleton: SkeletonData) -> 
         pcs.append(path)
 
     skeleton.pathConstraints = pcs
-    print(f"Read {tc_count} path constraints")
+    # print(f"Read {tc_count} path constraints")
     # print(pcs)
 
 
@@ -969,7 +967,7 @@ def read_vertices(reader: SpineBinaryReader) -> Tuple[List[float], List[int], in
     vertices_length = reader.read_u16()
     vertices = read_f32_array(reader, vertices_length)
 
-    _length = reader.read_u32() # maybe world_vertices_length ?
+    world_vertices_length = reader.read_u32() # maybe world_vertices_length ?
 
     # if bones_count == 0: #non-weighted
     #     print("non-weighted vertices")
@@ -978,22 +976,24 @@ def read_vertices(reader: SpineBinaryReader) -> Tuple[List[float], List[int], in
     #     print("weighted vertices")
     #     print("vertices count: ", count, "world vertices length: ", _length, "bones count: ", bones_count)
 
-    name_offset = reader.read_u32()
-    _name = get_pool_string(name_offset) # whose name ?
+    _name_offset = reader.read_u32()
+    # _name = get_pool_string(_name_offset, skeleton) # whose name ?
 
     is_weighted = bones_count > 0
+    vertex_count = world_vertices_length // 2
+
     if is_weighted:
         weighted_vertices = merge_weighted_vertices(vertices, bones)
-        return weighted_vertices, bones, vertices_length//3 # [x ,y ,weight] -> vertexCount = length//3
 
-    return vertices, bones, vertices_length//2 # [x, y] -> vertexCount = length//2
+        return weighted_vertices, bones, vertex_count
+
+    return vertices, bones, vertex_count
 
 def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attachment:
-    attachment = Attachment()
+    attachment: Attachment = Attachment()
     attachment_name_offset = reader.read_u32()
     attachment_type = AttachmentType(reader.read_u16())
     attachment_path_offset = reader.read_u32()
-    data: Any = None
 
     if attachment_type == AttachmentType.Region:  # 0
         region_data = RegionAttachment()
@@ -1019,25 +1019,25 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         region_data.height = floats[6]
         region_data.color = Color(int(clr[0] * 255), int(clr[1] * 255), int(clr[2] * 255), int(clr[3] * 255))
 
-        region_name = get_pool_string(_region_name_offset)
-        attachment.name = get_pool_string(attachment_name_offset)
-        attachment.path = region_name
+        region_name = get_pool_string(_region_name_offset, skeleton)
+        region_data.name = get_pool_string(attachment_name_offset, skeleton)
+        region_data.path = region_name
         
-        data = region_data
+        attachment = region_data
     # TODO: 暂时没有检测到这个类型，无法验证读取逻辑是否正确
     elif attachment_type == AttachmentType.Boundingbox:  # 1
         bounding_box_data = BoundingBoxAttachment()
-        vertices, _, vertex_count = read_vertices(reader)
+        vertices, bones, vertex_count = read_vertices(reader)
         
         bounding_box_data.vertices = vertices
+        bounding_box_data.isWeighted = len(bones) > 0
         bounding_box_data.vertexCount = vertex_count
-        data = bounding_box_data
-    # TODO: 目前出现的问题 都指向了 mesh
+        attachment = bounding_box_data
     elif attachment_type == AttachmentType.Mesh or attachment_type == AttachmentType.Linkedmesh:  # 2, 3
         mesh_data = MeshAttachment()
         linked_mesh_data = LinkedMeshAttachment()
 
-        vertices, _, vertex_count = read_vertices(reader)
+        vertices, bones, vertex_count = read_vertices(reader)
 
         # [0.0, 0.0, 664.0, 232.0, 664.0, 232.0] 实测应该是 x y width height originalWidth originalHeight
         floats6 = read_f32_array(reader, 6)
@@ -1062,7 +1062,7 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         # 32.0, 32.0, 1.0, 1.0, 1.0, 1.0]
         floats10 = read_f32_array(reader, 10)
 
-        # TODO 不知道是什么 maybe hull_3length
+        # TODO 不知道是什么 maybe hull_length
         hull_length = reader.read_u32() # maybe hull length
         # 0 flag
         _flag = reader.read_boolean()
@@ -1072,16 +1072,17 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         parent_mesh_name_offset = reader.read_u32()
         _parent_slot_index = reader.read_i16()
 
-        if scsp_version == ScspVersion.V3:
+        if skeleton.scspVersion == ScspVersion.V3:
             skin_index = reader.read_i16()  # always 0
             skin = skeleton.skins[skin_index].name if 0 <= skin_index < len(skeleton.skins) else None
         else:  # V2
             skin_name_offset = reader.read_u32()  # only in v2
-            skin = get_pool_string(skin_name_offset) if skin_name_offset != 0xFFFFFFFF else "default"
+            skin = get_pool_string(skin_name_offset, skeleton) if skin_name_offset != 0xFFFFFFFF else "default"
 
         deform = reader.read_boolean()
 
         mesh_data.vertexCount = vertex_count
+        mesh_data.isWeighted = len(bones) > 0
         mesh_data.vertices = vertices
         mesh_data.uvs = uvs
         mesh_data.triangles = triangles
@@ -1095,37 +1096,34 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         mesh_data.width = floats6[2]
         mesh_data.height = floats6[3]
         mesh_data.color = Color(r, g, b, a)
-        mesh_data.path = get_pool_string(path_offset)
+        mesh_data.path = get_pool_string(path_offset, skeleton)
 
 
-        linked_mesh_data.parentMesh = get_pool_string(parent_mesh_name_offset)
+        linked_mesh_data.parentMesh = get_pool_string(parent_mesh_name_offset, skeleton)
         linked_mesh_data.skin = skin
         linked_mesh_data.deform = deform
         linked_mesh_data.color = Color(r, g, b, a)
         linked_mesh_data.width = floats6[2]
         linked_mesh_data.height = floats6[3]
 
-        if attachment_type == AttachmentType.Mesh:
-            data = mesh_data
-        else:
-            data = linked_mesh_data
-
+        attachment = mesh_data if attachment_type == AttachmentType.Mesh else linked_mesh_data
 
     elif attachment_type == AttachmentType.Path:  # 4
         path_data = PathAttachment()
-        vertices, _, vertices_count = read_vertices(reader)
+        vertices, bones, vertices_count = read_vertices(reader)
         length_count = reader.read_u16()
         lengths = read_f32_array(reader, length_count)
         closed_value = reader.read_boolean()
         constant_speed_value = reader.read_boolean()
 
         path_data.vertices = vertices
+        path_data.isWeighted = len(bones) > 0
         path_data.vertexCount = vertices_count
         path_data.lengths = lengths
         path_data.closed = closed_value
         path_data.constantSpeed = constant_speed_value
 
-        data = path_data
+        attachment = path_data
 
     elif attachment_type == AttachmentType.Point:  # 5
         point_data = PointAttachment()
@@ -1135,24 +1133,25 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         point_data.y = point_floats[1]
         point_data.rotation = point_floats[2]
 
-        data = point_data
+        attachment = point_data
 
     elif attachment_type == AttachmentType.Clipping:  # 6
         clipping_data = ClippingAttachment()
-        vertices, _, vertex_count = read_vertices(reader)
+        vertices, bones, vertex_count = read_vertices(reader)
         end_slot_index = reader.read_i16()
 
         clipping_data.vertexCount = vertex_count
+        clipping_data.isWeighted = len(bones) > 0
         clipping_data.vertices = vertices
         clipping_data.endSlot = skeleton.slots[end_slot_index].name if 0 <= end_slot_index < len(
             skeleton.slots) else None
-        data = clipping_data
+        attachment = clipping_data
+    
     if attachment.name is None:
-        attachment.name = get_pool_string(attachment_name_offset)
+        attachment.name = get_pool_string(attachment_name_offset, skeleton)
     if attachment.path is None:
-        attachment.path = get_pool_string(attachment_path_offset)
+        attachment.path = get_pool_string(attachment_path_offset, skeleton)
     attachment.type = attachment_type
-    attachment.data = data
 
     return attachment
 
@@ -1181,14 +1180,14 @@ def read_skins(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
             attachment = read_attachment(reader, skeleton)
             attachments[slot_name][attachment.name] = attachment
 
-        skin.name = get_pool_string(skin_name_offset)
+        skin.name = get_pool_string(skin_name_offset, skeleton)
         skin.bones = [skeleton.bones[i].name for i in bone_indexes]
-        skin.paths = [get_pool_string(offset) for offset in path_constraint_name_offsets]
+        skin.paths = [get_pool_string(offset, skeleton) for offset in path_constraint_name_offsets]
         skin.attachments = attachments
         skins.append(skin)
 
     skeleton.skins = skins
-    print(f"Read {skin_count} skins")
+    # print(f"Read {skin_count} skins")
 
 
 # TODO Check
@@ -1206,18 +1205,18 @@ def read_events(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
         volume = reader.read_f32()
         balance = reader.read_f32()
 
-        event.name = get_pool_string(event_name_offset)
+        event.name = get_pool_string(event_name_offset, skeleton)
         event.intValue = int_value
         event.floatValue = float_value
-        event.stringValue = get_pool_string(string_offset)
-        event.audioPath = get_pool_string(audio_path_offset)
+        event.stringValue = get_pool_string(string_offset, skeleton)
+        event.audioPath = get_pool_string(audio_path_offset, skeleton)
         if event.audioPath and len(event.audioPath) > 0:
             event.volume = volume
             event.balance = balance
         events.append(event)
 
     skeleton.events = events
-    print(f"Read {event_count} events")
+    # print(f"Read {event_count} events")
 
 
 def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
@@ -1348,6 +1347,7 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
                 timeline_data.type = time_line_type
                 timeline_data.frames = frames
                 timeline_data.curves = curves
+                # TODO
             elif time_line_type == TimelineType.Attachment:  # 4
                 index = reader.read_i16()
                 frames_count = reader.read_u16()
@@ -1357,7 +1357,7 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
 
                 timeline_data = AttachmentTimeline()
                 timeline_data.times = frames
-                timeline_data.names = [get_pool_string(offset) for offset in attachment_name_offsets]
+                timeline_data.names = [get_pool_string(offset, skeleton) for offset in attachment_name_offsets]
                 
                 timeline_data.type = time_line_type
                 timeline_data.slot_index = index
@@ -1365,7 +1365,7 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
                 # attachment timeline 没有曲线数据
             # TODO Check
             elif time_line_type == TimelineType.Deform:  # 6
-                index = reader.read_i16()
+                slot_index = reader.read_i16()
 
                 frame_count = reader.read_u16()
                 frames = read_f32_array(reader, frame_count)
@@ -1382,17 +1382,42 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
                 attachment_name_offset = reader.read_u32()
 
                 skin_index = 0
-                if scsp_version == ScspVersion.V3:
+                if skeleton.scspVersion == ScspVersion.V3:
                     skin_index = reader.read_i16()  # always 0
+
+                # Vertex positions for an unweighted VertexAttachment, or deform offsets if it has weights.
+                slot_name = skeleton.slots[slot_index].name if 0 <= slot_index < len(skeleton.slots) else None
+                attachment_name = get_pool_string(attachment_name_offset, skeleton)
+                attachment = skeleton.skins[skin_index].attachments.get(slot_name, {}).get(attachment_name)
+                is_weighted = False
+                setup_vertices: List[float] = []
+                offsets: List[List[float]] = []
+                match attachment:
+                    case VertexAttachment() as va:
+                        is_weighted = va.isWeighted
+                        setup_vertices = va.vertices
+                        
+                if not is_weighted and setup_vertices: # non-weighted
+                    for dv in deform_vertices:
+                        frame_offsets: List[float] = []
+                        count = min(len(dv), len(setup_vertices))
+                        for i in range(count):
+                            frame_offsets.append(dv[i] - setup_vertices[i])
+                        if len(dv) < len(setup_vertices): # 补0
+                            frame_offsets.extend([0.0] * (len(setup_vertices) - len(dv)))
+                        offsets.append(frame_offsets)
+
+                else: # weighted
+                    offsets = deform_vertices
 
                 timeline_data = DeformTimeline()
                 timeline_data.times = frames
-                timeline_data.vertices = deform_vertices
+                timeline_data.vertices = offsets
                 timeline_data.skin = skeleton.skins[skin_index].name if 0 <= skin_index < len(skeleton.skins) else None
-                timeline_data.attachment = get_pool_string(attachment_name_offset)
+                timeline_data.attachment = attachment_name
 
                 timeline_data.type = time_line_type                
-                timeline_data.slot_index = index
+                timeline_data.slot_index = slot_index
                 timeline_data.frames = frames
                 timeline_data.curves = curves
             # TODO 结构不确定
@@ -1404,7 +1429,7 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
 
                 timeline_data = EventTimeline()
                 timeline_data.times = frames
-                timeline_data.names = [get_pool_string(offset) for offset in event_name_offsets]
+                timeline_data.names = [get_pool_string(offset, skeleton) for offset in event_name_offsets]
                 
                 timeline_data.type = time_line_type
                 timeline_data.frames = frames
@@ -1427,50 +1452,42 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
                 # drawOrder timeline 没有曲线数据
             timelines.append(timeline_data)
 
-        anim.name = get_pool_string(anim_name_offset)
+        anim.name = get_pool_string(anim_name_offset, skeleton)
         anim.duration = duration
         anim.timelines = timelines
         animations.append(anim)
 
     skeleton.animations = animations
-    print(f"Read {animation_count} animations")
+    # print(f"Read {animation_count} animations")
 
 
-def read_binary_skeleton(data: bytes) -> SkeletonData:
+def read_scsp_v3(r: SpineBinaryReader, sk: SkeletonData) -> None:
+    read_bones(r, sk)
+    read_iks(r, sk)
+    read_slots(r, sk)
+    read_transform_constraints(r, sk)
+    read_path_constraints(r, sk)
+    read_skins(r, sk)
+    read_events(r, sk)
+    read_animations(r, sk)
+
+def read_scsp_v2(r: SpineBinaryReader, sk: SkeletonData) -> None:
+    pass
+
+def read_binary_skeleton(data: bytes) -> Tuple[SkeletonData, bool]:
     r = SpineBinaryReader(data)
     sk = SkeletonData()
-
-    # skeleton info
+    
     read_skeleton_info(r, sk)
 
-    if scsp_version == ScspVersion.V2:
-        raise NotImplementedError("Scsp V2 is not supported yet")
-
-    # bones
-    read_bones(r, sk)
-
-    # ik constraints
-    read_iks(r, sk)
-
-    # slots
-    read_slots(r, sk)
-
-    # transform constraints
-    read_transform_constraints(r, sk)
-
-    # path constraints
-    read_path_constraints(r, sk)
-
-    # skins
-    read_skins(r, sk)
-
-    # events
-    read_events(r, sk)
-
-    # animations
-    read_animations(r, sk)
+    if sk.scspVersion == ScspVersion.V2:
+        # print(f"SCSP version 2 NOT IMPLEMENTED, Next.")
+        read_scsp_v2(r, sk)
+        return sk, False
+    else:# V3
+        read_scsp_v3(r, sk)
     
-    return sk
+    return sk, True
 
 
 # ==============================
@@ -1480,7 +1497,6 @@ def read_binary_skeleton(data: bytes) -> SkeletonData:
 def write_curve(curves: List[float], frame_index: int) -> Dict[str, Any]:
     item: Dict[str, Any] = defaultdict(dict)
     curve_index = frame_index * 19
-    # print(f"frame_index: {frame_index}, curve_index: {curve_index}, curves length: {len(curves)}")
     curve_type = int(curves[curve_index]) # type + 18 floats, 每个帧的曲线数据占 19 个 float
 
     if curve_type == CurveType.LINEAR:
@@ -1555,7 +1571,7 @@ def write_timeline_data(timeline: TimelineData, sk: SkeletonData) -> List[Dict[s
                 item: Dict[str, Any] = defaultdict(dict)
                 if t.times[i] != 0.0:
                     item["time"] = t.times[i]
-                if i < len(t.names):
+                if i < len(t.names) and t.names[i]:
                     item["name"] = t.names[i]
                 else:
                     item["name"] = None
@@ -1574,12 +1590,13 @@ def write_timeline_data(timeline: TimelineData, sk: SkeletonData) -> List[Dict[s
                     # print(f"ColorTimeline frame {i} has curve data")
                     item.update(write_curve(t.curves, i))
                 arr.append(item)
-            
         case DeformTimeline() as t:
             for i in range(frame_count):
                 item: Dict[str, Any] = defaultdict(dict)
                 if t.times[i] != 0.0:
                     item["time"] = t.times[i]
+                # if t.offsets and i < len(t.offsets):
+                #     item["offset"] = t.offsets[i]
                 if t.vertices and i < len(t.vertices):
                     item["vertices"] = t.vertices[i]
                     
@@ -1591,7 +1608,7 @@ def write_timeline_data(timeline: TimelineData, sk: SkeletonData) -> List[Dict[s
                 item: Dict[str, Any] = defaultdict(dict)
                 if t.times[i] != 0.0:
                     item["time"] = t.times[i]
-                if i < len(t.names):
+                if i < len(t.names) and t.names[i]:
                     item["name"] = t.names[i]
                 else:
                     item["name"] = None
@@ -1800,8 +1817,8 @@ def write_json_data(sk: SkeletonData) -> Dict[str, Any]:
     }
     if sk.hashString:
         skeleton["hash"] = sk.hashString
-    # elif sk.hash != 0:
-    #     skeleton["hash"] = uint64_to_base64(sk.hash)
+    elif sk.hash != 0:
+        skeleton["hash"] = uint64_to_base64(sk.hash)
     if sk.version:
         skeleton["spine"] = sk.version
     if sk.nonessential:
@@ -2000,7 +2017,7 @@ def write_json_data(sk: SkeletonData) -> Dict[str, Any]:
                         a_obj["path"] = att.path
                 if att.type != AttachmentType.Region:
                     a_obj["type"] = {
-                        AttachmentType.Region: "region",
+                        AttachmentType.Region: "region", # 占位
                         AttachmentType.Boundingbox: "boundingbox",
                         AttachmentType.Mesh: "mesh",
                         AttachmentType.Linkedmesh: "linkedmesh",
@@ -2008,98 +2025,89 @@ def write_json_data(sk: SkeletonData) -> Dict[str, Any]:
                         AttachmentType.Point: "point",
                         AttachmentType.Clipping: "clipping",
                     }[att.type]
+                match att:
+                    case RegionAttachment() as region:
+                        if region.x != 0.0:
+                            a_obj["x"] = region.x
+                        if region.y != 0.0:
+                            a_obj["y"] = region.y
+                        if region.rotation != 0.0:
+                            a_obj["rotation"] = region.rotation
+                        if region.scaleX != 1.0:
+                            a_obj["scaleX"] = region.scaleX
+                        if region.scaleY != 1.0:
+                            a_obj["scaleY"] = region.scaleY
+                        a_obj["width"] = region.width
+                        a_obj["height"] = region.height
+                        if region.color:
+                            a_obj["color"] = color_to_string(region.color, True)
+                    case BoundingBoxAttachment() as box:
+                        if box.color:
+                            a_obj["color"] = color_to_string(box.color, True)
+                        if box.vertices:
+                            a_obj["vertexCount"] = box.vertexCount
+                            a_obj["vertices"] = box.vertices
+                    case MeshAttachment() as mesh:
+                        a_obj["width"] = mesh.width
+                        a_obj["height"] = mesh.height
 
-                if att.type == AttachmentType.Region:
-                    region: RegionAttachment = att.data
-                    if region.x != 0.0:
-                        a_obj["x"] = region.x
-                    if region.y != 0.0:
-                        a_obj["y"] = region.y
-                    if region.rotation != 0.0:
-                        a_obj["rotation"] = region.rotation
-                    if region.scaleX != 1.0:
-                        a_obj["scaleX"] = region.scaleX
-                    if region.scaleY != 1.0:
-                        a_obj["scaleY"] = region.scaleY
-                    a_obj["width"] = region.width
-                    a_obj["height"] = region.height
-                    if region.color:
-                        a_obj["color"] = color_to_string(region.color, True)
+                        effective_path = mesh.path or att.path
+                        if effective_path and effective_path != att_name:
+                            a_obj["path"] = effective_path
+                        if mesh.color:
+                            a_obj["color"] = color_to_string(mesh.color, True)
+                        if mesh.hullLength != 0:
+                            a_obj["hull"] = mesh.hullLength
+                        if mesh.triangles:
+                            a_obj["triangles"] = mesh.triangles
+                        if mesh.edges:
+                            a_obj["edges"] = mesh.edges
+                        if mesh.uvs:
+                            a_obj["uvs"] = mesh.uvs
+                        if mesh.vertices:
+                            a_obj["vertexCount"] = mesh.vertexCount
+                            a_obj["vertices"] = mesh.vertices
+                    case LinkedMeshAttachment() as lmesh:
+                        a_obj["width"] = lmesh.width
+                        a_obj["height"] = lmesh.height
+                        if lmesh.color:
+                            a_obj["color"] = color_to_string(lmesh.color, True)
+                        a_obj["parent"] = lmesh.parentMesh
+                        # TODO ?
+                        if lmesh.deform:
+                            a_obj["deform"] = True
+                        if lmesh.skin:
+                            a_obj["skin"] = lmesh.skin
 
-                elif att.type == AttachmentType.Boundingbox:
-                    box: BoundingBoxAttachment = att.data
-                    if box.color:
-                        a_obj["color"] = color_to_string(box.color, True)
-                    if box.vertices:
-                        a_obj["vertexCount"] = box.vertexCount
-                        a_obj["vertices"] = box.vertices
-
-                elif att.type == AttachmentType.Mesh:
-                    mesh: MeshAttachment = att.data
-
-                    a_obj["width"] = mesh.width
-                    a_obj["height"] = mesh.height
-
-                    effective_path = mesh.path or att.path
-                    if effective_path and effective_path != att_name:
-                        a_obj["path"] = effective_path
-                    if mesh.color:
-                        a_obj["color"] = color_to_string(mesh.color, True)
-                    if mesh.hullLength != 0:
-                        a_obj["hull"] = mesh.hullLength
-                    if mesh.triangles:
-                        a_obj["triangles"] = mesh.triangles
-                    if mesh.edges:
-                        a_obj["edges"] = mesh.edges
-                    if mesh.uvs:
-                        a_obj["uvs"] = mesh.uvs
-                    if mesh.vertices:
-                        a_obj["vertexCount"] = mesh.vertexCount
-                        a_obj["vertices"] = mesh.vertices
-                elif att.type == AttachmentType.Linkedmesh:
-                    lmesh: LinkedMeshAttachment = att.data
-                    a_obj["width"] = lmesh.width
-                    a_obj["height"] = lmesh.height
-                    if lmesh.color:
-                        a_obj["color"] = color_to_string(lmesh.color, True)
-                    a_obj["parent"] = lmesh.parentMesh
-                    if not lmesh.deform:
-                        a_obj["deform"] = lmesh.deform
-                    if lmesh.skin:
-                        a_obj["skin"] = lmesh.skin
-
-                elif att.type == AttachmentType.Path:
-                    path_att: PathAttachment = att.data
-                    if path_att.closed:
-                        a_obj["closed"] = True
-                    if not path_att.constantSpeed:
-                        a_obj["constantSpeed"] = path_att.constantSpeed
-                    if path_att.color:
-                        a_obj["color"] = color_to_string(path_att.color, True)
-                    if path_att.vertices:
-                        a_obj["vertexCount"] = path_att.vertexCount
-                        a_obj["vertices"] = path_att.vertices
-                    if path_att.lengths:
-                        a_obj["lengths"] = path_att.lengths
-                elif att.type == AttachmentType.Point:
-                    point: PointAttachment = att.data
-                    if point.x != 0.0:
-                        a_obj["x"] = point.x
-                    if point.y != 0.0:
-                        a_obj["y"] = point.y
-                    if point.rotation != 0.0:
-                        a_obj["rotation"] = point.rotation
-                    if point.color:
-                        a_obj["color"] = color_to_string(point.color, True)
-                elif att.type == AttachmentType.Clipping:
-                    clip: ClippingAttachment = att.data
-                    if clip.endSlot:
-                        a_obj["end"] = clip.endSlot
-                    if clip.color:
-                        a_obj["color"] = color_to_string(clip.color, True)
-                    if clip.vertices:
-                        a_obj["vertexCount"] = clip.vertexCount
-                        a_obj["vertices"] = clip.vertices
+                    case PathAttachment() as path_att:
+                        if path_att.closed:
+                            a_obj["closed"] = True
+                        if not path_att.constantSpeed:
+                            a_obj["constantSpeed"] = path_att.constantSpeed
+                        if path_att.color:
+                            a_obj["color"] = color_to_string(path_att.color, True)
+                        if path_att.vertices:
+                            a_obj["vertexCount"] = path_att.vertexCount
+                            a_obj["vertices"] = path_att.vertices
+                        if path_att.lengths:
+                            a_obj["lengths"] = path_att.lengths
+                    case PointAttachment() as point:
+                        if point.x != 0.0:
+                            a_obj["x"] = point.x
+                        if point.y != 0.0:
+                            a_obj["y"] = point.y
+                        if point.rotation != 0.0:
+                            a_obj["rotation"] = point.rotation
+                        if point.color:
+                            a_obj["color"] = color_to_string(point.color, True)
+                    case ClippingAttachment() as clip:
+                        if clip.endSlot:
+                            a_obj["end"] = clip.endSlot
+                        if clip.color:
+                            a_obj["color"] = color_to_string(clip.color, True)
+                        if clip.vertices:
+                            a_obj["vertexCount"] = clip.vertexCount
+                            a_obj["vertices"] = clip.vertices
 
                 s_obj.setdefault("attachments", {}).setdefault(slot_name, {})[att_name] = a_obj
         j["skins"].append(s_obj)
@@ -2159,19 +2167,59 @@ def write_json_data(sk: SkeletonData) -> Dict[str, Any]:
 # ==============================
 # Converter
 # ==============================
-
+def compress_json(json_str: str) -> str:
+    data = json.loads(json_str)
+    return json.dumps(data,separators=(",",":"))
 
 # noinspection PyTypeChecker
-def convert_skel_to_json(input_path: str, output_path: str) -> None:
+def convert_skel_to_json(input_path: str, output_path: str) -> bool:
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     with open(input_path, "rb") as f:
         data = f.read()
 
-    skeleton = read_binary_skeleton(data)
+    skeleton, is_converted = read_binary_skeleton(data)
+    if not is_converted:
+        print(f"{input_path} is v2.1.27 scsp, not implemented yet.")
+        return False
+
     root = write_json_data(skeleton)
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(root, f, ensure_ascii=False, indent=4)
+    if IS_COMPRESS_JSON:
+        json_str = json.dumps(root, ensure_ascii=False)
+        json_str = compress_json(json_str)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(json_str)
+    else:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(root, f, ensure_ascii=False, indent=4)
 
+    return True
+
+# ==============================
+# Batch
+# ==============================
+
+def batch_convert(input_dir: str, output_dir: str):
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+
+    total = 0
+    success = 0
+
+    for file in input_path.rglob("*.scsp"):
+        total += 1
+        relative_path = file.relative_to(input_path)
+        out_file = output_path / relative_path.with_suffix(".json")
+
+        try:
+            if convert_skel_to_json(str(file), str(out_file)):
+                success += 1
+
+        except Exception as e:
+            print(f"[ERROR] {file}: {e}")
+
+    print(f"\nDone: {success}/{total} files converted.")
 
 # ==============================
 # Entry
@@ -2179,7 +2227,4 @@ def convert_skel_to_json(input_path: str, output_path: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 3:
-        convert_skel_to_json(sys.argv[1], sys.argv[2])
-    else:
-        convert_skel_to_json(INPUT_PATH, OUTPUT_PATH)
+    batch_convert(INPUT_PATH, OUTPUT_PATH)

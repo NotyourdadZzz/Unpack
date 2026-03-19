@@ -8,8 +8,8 @@ from typing import List, Optional, Any, Tuple
 # ==============================
 # Config
 # ==============================
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\V2"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data\test"
+INPUT_PATH = r"/SpineFileProcess/Converter/Data/V2"
+OUTPUT_PATH = r"/SpineFileProcess/Converter/Data/test"
 _EXT = ".scsp"
 string_pool = b''
 
