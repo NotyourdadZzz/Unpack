@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Reference: https://github.com/EsotericSoftware/spine-runtimes/tree/3.8/spine-csharp/src
 # 第七史诗 EpicSeven Convert skel 3.8.99 to json
+# 半成品: 目前有些模型切换到 normal 这个 skin 的时候会有表情重叠
 from __future__ import annotations
 
 import base64
@@ -12,13 +13,13 @@ import lz4.block
 from dataclasses import dataclass, field
 from collections import defaultdict
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 # ==============================
 # Config
 # ==============================
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\.Scripts\SpineFileProcess\Converter\Data"
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\EpicSeven\portrait"
+OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\EpicSeven\TestScsp"
 
 
 IS_COMPRESS_JSON = True
@@ -171,7 +172,7 @@ class MeshAttachment(VertexAttachment):
 
 @dataclass
 class LinkedMeshAttachment(VertexAttachment):
-    skin: Optional[str] = None
+    skinIndex: int = 0
     parentMesh: Optional[str] = None
     deform: bool = True
 
@@ -384,7 +385,7 @@ class DeformTimeline(TimelineData): # 6 time vertices (offset) curve
     skin: Optional[str] = None
     slot_index: int = 0
     attachment: Optional[str] = None
-    # offsets: List[List[float]] = field(default_factory=list)
+    offsets: List[List[float]] = field(default_factory=list)
     vertices: List[List[float]] = field(default_factory=list)
 @dataclass
 class EventTimeline(TimelineData): # 7 time name 
@@ -1072,12 +1073,14 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         parent_mesh_name_offset = reader.read_u32()
         _parent_slot_index = reader.read_i16()
 
+        skin_index = 0
         if skeleton.scspVersion == ScspVersion.V3:
             skin_index = reader.read_i16()  # always 0
-            skin = skeleton.skins[skin_index].name if 0 <= skin_index < len(skeleton.skins) else None
+            # TODO 这里可能会越界, 因为如果需要的皮肤在当前皮肤后面
+            # skin = skeleton.skins[skin_index].name if 0 <= skin_index < len(skeleton.skins) else "default"
         else:  # V2
             skin_name_offset = reader.read_u32()  # only in v2
-            skin = get_pool_string(skin_name_offset, skeleton) if skin_name_offset != 0xFFFFFFFF else "default"
+            _skin = get_pool_string(skin_name_offset, skeleton) if skin_name_offset != 0xFFFFFFFF else "default"
 
         deform = reader.read_boolean()
 
@@ -1093,14 +1096,14 @@ def read_attachment(reader: SpineBinaryReader, skeleton: SkeletonData) -> Attach
         g = int(floats10[7] * 255)
         b = int(floats10[8] * 255)
         a = int(floats10[9] * 255)
+        mesh_data.path = get_pool_string(path_offset, skeleton)
+        mesh_data.color = Color(r, g, b, a)
         mesh_data.width = floats6[2]
         mesh_data.height = floats6[3]
-        mesh_data.color = Color(r, g, b, a)
-        mesh_data.path = get_pool_string(path_offset, skeleton)
 
 
         linked_mesh_data.parentMesh = get_pool_string(parent_mesh_name_offset, skeleton)
-        linked_mesh_data.skin = skin
+        linked_mesh_data.skinIndex = skin_index
         linked_mesh_data.deform = deform
         linked_mesh_data.color = Color(r, g, b, a)
         linked_mesh_data.width = floats6[2]
@@ -1392,10 +1395,9 @@ def read_animations(reader: SpineBinaryReader, skeleton: SkeletonData) -> None:
                 is_weighted = False
                 setup_vertices: List[float] = []
                 offsets: List[List[float]] = []
-                match attachment:
-                    case VertexAttachment() as va:
-                        is_weighted = va.isWeighted
-                        setup_vertices = va.vertices
+                if isinstance(attachment, VertexAttachment):
+                    is_weighted = attachment.isWeighted
+                    setup_vertices = attachment.vertices
                         
                 if not is_weighted and setup_vertices: # non-weighted
                     for dv in deform_vertices:
@@ -1595,8 +1597,8 @@ def write_timeline_data(timeline: TimelineData, sk: SkeletonData) -> List[Dict[s
                 item: Dict[str, Any] = defaultdict(dict)
                 if t.times[i] != 0.0:
                     item["time"] = t.times[i]
-                # if t.offsets and i < len(t.offsets):
-                #     item["offset"] = t.offsets[i]
+                if t.offsets and i < len(t.offsets):
+                    item["offset"] = t.offsets[i]
                 if t.vertices and i < len(t.vertices):
                     item["vertices"] = t.vertices[i]
                     
@@ -2074,10 +2076,9 @@ def write_json_data(sk: SkeletonData) -> Dict[str, Any]:
                             a_obj["color"] = color_to_string(lmesh.color, True)
                         a_obj["parent"] = lmesh.parentMesh
                         # TODO ?
-                        if lmesh.deform:
-                            a_obj["deform"] = True
-                        if lmesh.skin:
-                            a_obj["skin"] = lmesh.skin
+                        if not lmesh.deform:
+                            a_obj["deform"] = False
+                        a_obj["skin"] = sk.skins[lmesh.skinIndex].name if 0 <= lmesh.skinIndex < len(sk.skins) else None
 
                     case PathAttachment() as path_att:
                         if path_att.closed:
@@ -2171,6 +2172,61 @@ def compress_json(json_str: str) -> str:
     data = json.loads(json_str)
     return json.dumps(data,separators=(",",":"))
 
+def special_process(json_str: str) -> str:
+    # 删除 normal 中的重合部分
+    # 读取json中的 skin键 对应的值, 也就是一个字典列表, 对于列表中的每一个字典 都会有一个键 "name", 找到这个键对应的值为 “normal” 的字典 normal,
+    # 对其做以下处理: 找到其余字典中 "attachments" 键下的所有键, 进行交集运算, 会得到一个交集键列表, 将 normal 字典中 "attachments" 键下的交集键对应的值删除
+    # 如果deform 存在某些交集键, 则这些键不进行删除
+    data = json.loads(json_str)
+    skins = data.get("skins", [])
+    if not isinstance(skins, list):
+        return json_str
+    normal_skin = None
+    default_skin = None
+    other_skins = []
+    for skin in skins:
+        if skin.get("name") == "normal":
+            normal_skin = skin
+        elif skin.get("name") == "default":
+            default_skin = skin
+        else:
+            other_skins.append(skin)
+    if normal_skin is None or default_skin is None or not other_skins:
+        return json_str
+    normal_attachments: Dict = normal_skin.get("attachments", {})
+    default_attachments: Dict = default_skin.get("attachments", {})
+    if not normal_attachments:
+        return json_str
+
+    key_sets: list[Set[str]] = []
+    for skin in other_skins:
+        attachments = skin.get("attachments", {})
+        key_sets.append(set(attachments.keys()))
+    if not key_sets:
+        return json_str
+    common_keys = set.intersection(*key_sets)
+
+    protected_keys: Set[str] = set()
+    animations = data.get("animations", {})
+    if isinstance(animations, dict):
+        for anim in animations.values():
+            deform = anim.get("deform")
+            if isinstance(deform, dict):
+                normal_deform = deform.get("normal", {})
+                if isinstance(normal_deform, dict):
+                    protected_keys.update(normal_deform.keys())
+
+    keys_to_delete = common_keys - protected_keys
+
+    if len(keys_to_delete) > 1:
+        return  json_str
+
+    for key in keys_to_delete:
+        if key in normal_attachments and key not in default_attachments:
+            del normal_attachments[key]
+
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
 # noinspection PyTypeChecker
 def convert_skel_to_json(input_path: str, output_path: str) -> bool:
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -2184,15 +2240,14 @@ def convert_skel_to_json(input_path: str, output_path: str) -> bool:
         return False
 
     root = write_json_data(skeleton)
+    json_str = json.dumps(root, ensure_ascii=False)
+    json_str = special_process(json_str) # 临时的处理, 但是并不是完全可靠的
 
     if IS_COMPRESS_JSON:
-        json_str = json.dumps(root, ensure_ascii=False)
         json_str = compress_json(json_str)
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(json_str)
-    else:
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(root, f, ensure_ascii=False, indent=4)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(json_str)
 
     return True
 
