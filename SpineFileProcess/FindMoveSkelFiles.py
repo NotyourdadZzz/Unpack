@@ -4,7 +4,7 @@ from pathlib import Path
 # 并将它们移动到指定的输出目录中。对于已经存在的目标文件，程序会跳过移动操作，
 # 并在控制台输出相应的信息。通过设置DRY_RUN变量，可以选择是否实际执行文件移动操作，还是仅打印出将要执行的操作。
 # ====== 配置 ======
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\SuperDemension")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\base\assets")
 OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\output")
 DRY_RUN = True
 # ==================
@@ -62,10 +62,10 @@ def is_spine_json(path: Path) -> bool:
 
     try:
         text = head.decode("utf-8", errors="ignore")
-    except:
+    except OSError:
         return False
 
-    return '"skeleton"' in text and '"spine"' in text
+    return '"skeleton"' in text
 
 
 def is_spine_skel(path: Path) -> bool:
