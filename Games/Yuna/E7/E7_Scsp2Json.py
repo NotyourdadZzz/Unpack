@@ -2228,7 +2228,7 @@ def special_process(json_str: str) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 # noinspection PyTypeChecker
-def convert_skel_to_json(input_path: str, output_path: str) -> bool:
+def convert_scsp_to_json(input_path: str, output_path: str) -> bool:
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(input_path, "rb") as f:
@@ -2268,7 +2268,7 @@ def batch_convert(input_dir: str, output_dir: str):
         out_file = output_path / relative_path.with_suffix(".json")
 
         try:
-            if convert_skel_to_json(str(file), str(out_file)):
+            if convert_scsp_to_json(str(file), str(out_file)):
                 success += 1
 
         except Exception as e:
