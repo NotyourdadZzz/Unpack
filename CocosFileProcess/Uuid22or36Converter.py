@@ -2,7 +2,7 @@
 BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 BASE64_MAP = {c: i for i, c in enumerate(BASE64_KEYS)}
 
-def Decompress(base64_str):
+def decompress(base64_str):
     """
     解压: 将 22位 Cocos 压缩 ID 转换为标准 36位 UUID
     """
@@ -29,7 +29,7 @@ def Decompress(base64_str):
     # 按照 8-4-4-4-12 格式插入连字符
     return f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
 
-def Compress(full_uuid):
+def compress(full_uuid):
     """
     压缩: 将标准 36位 UUID 转换为 22位 Cocos压缩 ID
     """
@@ -61,9 +61,9 @@ def Compress(full_uuid):
 
 if __name__ == '__main__':
     # 解压
-    b64 = "00Lt0MZLZFcLuDbzsHyeul"
-    print(f"解压结果: {Decompress(b64)}")
+    uuid22 = "00Lt0MZLZFcLuDbzsHyeul"
+    print(f"解压结果: {decompress(uuid22)}")
 
     # 压缩
-    uid = "1be2789f-7071-4c87-b6a4-b32572f33bda"
-    print(f"压缩结果: {Compress(uid)}")
+    uuid36 = "c56072d7-0787-406f-9f10-c7c7be8f9c88"
+    print(f"压缩结果: {compress(uuid36)}")
