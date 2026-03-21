@@ -2,41 +2,31 @@ import os
 import shutil
 import json
 from pathlib import Path
+from collections import defaultdict
 
 
-
-# ---------- 配置 ----------
-CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\config.json")      # config.json 路径
-
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\native")               # 待分类文件根目录
-OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\Output")             # 输出目录
+# ---------- Config ----------
+CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\gameBundle\cc.config.json")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\gameBundle")
+OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\Output")
 # --------------------------
 
 
 BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 HEX_CHARS = "0123456789abcdef"
 
-# Base64 -> int 映射表
-BASE64_VALUES = [64] * 123
-for i, c in enumerate(BASE64_KEYS[:64]):
-    BASE64_VALUES[ord(c)] = i
-
 
 def compress_uuid(full_uuid: str) -> str:
-    """
-    将标准36位UUID转换为22位短UUID（Base64风格）
-    """
-    
     parts = full_uuid.split('@')
     uuid_part = parts[0]
     suffix_part = '@' + parts[1] if len(parts) > 1 else ''
 
     if len(uuid_part) != 36:
         return full_uuid
-    
+
     clean_uuid = uuid_part.replace("-", "")
     hex_map = {c: i for i, c in enumerate(HEX_CHARS)}
-    zip_uuid = [uuid_part[0], uuid_part[1]]  # 保留前两字符
+    zip_uuid = [uuid_part[0], uuid_part[1]]
 
     for i in range(2, 32, 3):
         left = hex_map[clean_uuid[i]]
@@ -46,12 +36,10 @@ def compress_uuid(full_uuid: str) -> str:
         zip_uuid.append(BASE64_KEYS[(left << 2) + (mid >> 2)])
         zip_uuid.append(BASE64_KEYS[((mid & 3) << 4) + right])
 
-    compressed = ''.join(zip_uuid)
-    return compressed + suffix_part
+    return ''.join(zip_uuid) + suffix_part
 
 
 def main():
-    # 构建映射表 uuid22 -> 原始路径
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         config = json.load(f)
 
@@ -59,26 +47,26 @@ def main():
     uuids = config.get("uuids", [])
     paths_dict = config.get("paths", {})
 
-    for uuidIndex, path in paths_dict.items():  # <uuidIndex, path>
+    for uuidIndex, path in paths_dict.items():
         idx = int(uuidIndex)
-        path_str = path[0]  # 原始资源路径
         if idx < len(uuids):
             uuid22 = uuids[idx]
+            path_str = path[0]
             uuid22_to_path[uuid22] = path_str
 
-    print(f"[INFO] 映射表生成完成，共 {len(uuid22_to_path)} 条映射")
+    print(f"[INFO] 映射表生成完成，共 {len(uuid22_to_path)} 条")
 
-    # 遍历待分类文件
+    groups = defaultdict(list)  # dst_path -> [(src_path, size)]
     not_found_files = []
 
-    for root, dirs, files in os.walk(INPUT_DIR):
+    for root, _, files in os.walk(INPUT_DIR):
         for file in files:
             name, ext = os.path.splitext(file)
             ext = ext.lower()
 
             if len(name) >= 36:
                 uuid22 = compress_uuid(name)
-            else:  # <36
+            else:
                 uuid22 = name
 
             if uuid22 not in uuid22_to_path:
@@ -87,24 +75,46 @@ def main():
 
             orig_path = uuid22_to_path[uuid22]
             dir_path, logical_name = os.path.split(orig_path)
+
             target_dir = OUTPUT_DIR / dir_path
-            target_dir.mkdir(parents=True, exist_ok=True)
-
-            src_file = Path(root) / file
-
-            # if ext == ".bin" :
-            #     ext = ".skel"
-
             dst_file = target_dir / f"{logical_name}{ext}"
 
-            # shutil.copy2(src_file, dst_file)  # 保留原文件
-            shutil.move(src_file, dst_file)
+            src_file = Path(root) / file
+            size = src_file.stat().st_size
 
-    print(f"[INFO] 分类完成，{len(not_found_files)} 个文件未找到映射")
+            groups[dst_file].append((src_file, size))
+
+    print(f"[INFO] 收集完成，共 {len(groups)} 个目标路径")
+
+    for dst_file, items in groups.items():
+        # 按 size 降序
+        items.sort(key=lambda x: x[1], reverse=True)
+
+        best_src, best_size = items[0]
+
+        if len(items) > 1:
+            print(f"[CONFLICT] {dst_file} ← {len(items)} 个文件，仅保留最大(size={best_size})")
+
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # 移动最大文件
+        print(f"[KEEP] {best_src} -> {dst_file}")
+        shutil.move(best_src, dst_file)
+
+        # 删除其余文件
+        for src_file, size in items[1:]:
+            print(f"[DROP] {src_file} (size={size})")
+            # try:
+            #     os.remove(src_file)
+            # except Exception as e:
+            #     print(f"[ERROR] 删除失败: {src_file} | {e}")
+
+    print(f"[INFO] 完成，{len(not_found_files)} 个文件未找到映射")
     if not_found_files:
-        print("[WARN] 未找到映射的文件列表：")
+        print("[WARN] 未匹配文件：")
         for f in not_found_files:
             print(" ", f)
+
 
 if __name__ == "__main__":
     main()
