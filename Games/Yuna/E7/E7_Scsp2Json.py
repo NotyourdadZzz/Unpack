@@ -334,11 +334,11 @@ class TimelineData:
     # 1 translate: [time, x, y, ...]
     # 2 scale: [time, x, y, ...] 其中x, y 是 scaleX, scaleY 但是用 x y 字段表示
     # 3 shear: [time, x, y, ...] 其中x, y 是 shearX, shearY 但是用 x y 字段表示
-    # 4 attachment: [time, ...] name另外存在extra里面了
+    # 4 attachment: [time, ...]
     # 5 color : [time, r, g, b, a, ...]
-    # 6 deform : [time, ...] vertices另外存在extra里面了
-    # 7 event : [time, ...] name另外存在extra里面了
-    # 8 drawOrder : [time, ...] orders另外存在extra里面了
+    # 6 deform : [time, ...]
+    # 7 event : [time, ...]
+    # 8 drawOrder : [time, ...] 
     # 9 ik : [time, mix, softness, bend_direction (int), compress (bool), stretch (bool)]
     # 10 transform : [time, rotateMix, translateMix, scaleMix, shearMix, ...]
     # 11 position: [time, position, ...] 
