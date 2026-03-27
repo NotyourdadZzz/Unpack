@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 # ===== 配置 =====
-ROOT_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\native"   # 指定搜索目录
+ROOT_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\res\import"   # 指定搜索目录
 TOP_N = 10               # 取前 N 个最大文件
 EXCLUDE_EXTENSIONS = ['.png', '.jpg', '.webp', '.astc', '.mp3', '.mp4', '.ttf', '.binary']  # 要排除的文件后缀
 
