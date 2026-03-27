@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import List, Dict
 
+
 # --- 配置常量 ---
 TARGET_DAT_FILE = "character.dat"
 TARGET_JSON_PATTERN = "MOC.*.json"
@@ -121,8 +122,6 @@ def main():
         return
 
     # 1. 打印操作列表
-    print("\n--- ⚠️ 发现以下模型目录，即将执行文件和内容修改操作：---")
-    
     for i, op in enumerate(operations):
         old_json_name = op["json_rename"][0].name
         new_json_name = op["json_rename"][1].name
