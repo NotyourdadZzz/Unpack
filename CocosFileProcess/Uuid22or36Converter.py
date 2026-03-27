@@ -61,7 +61,7 @@ def compress(full_uuid):
 
 if __name__ == '__main__':
     # 解压
-    uuid22 = "00Lt0MZLZFcLuDbzsHyeul"
+    uuid22 = "15alocojdEuoPKrUvUhTSQ"
     print(f"解压结果: {decompress(uuid22)}")
 
     # 压缩
