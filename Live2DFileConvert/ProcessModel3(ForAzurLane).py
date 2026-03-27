@@ -205,12 +205,6 @@ root.title("Model3 批量动作分类工具")
 root.geometry("400x150")
 root.resizable(False, False)
 
-# 确保主窗口的图标和样式一致（仅示例）
-# try:
-#     root.iconbitmap("icon.ico")
-# except:
-#     pass
-
 btn = tk.Button(root, text="选择目录并处理", command=select_folder, width=30, height=1, font=("Helvetica", 12, "bold"), bg="#1E88E5", fg="white", relief="raised", bd=3)
 btn.pack(pady=40, padx=20)
 
