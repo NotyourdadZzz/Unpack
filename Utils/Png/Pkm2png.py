@@ -3,8 +3,7 @@ import subprocess
 from pathlib import Path
 # https://github.com/zhukunqian/pkm2png
 
-# ===== Config =====
-INPUT_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Spine")
+INPUT_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Textures")
 
 
 ETCPACK_DIR = Path(r"D:\Tools\ReverseTools\Pkm2png\pkm2png-master")

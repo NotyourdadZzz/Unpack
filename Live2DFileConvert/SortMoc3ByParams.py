@@ -16,7 +16,7 @@ import json
 #     ├─ .model3.json
 # ├─ model2
 # ├─ ...
-DRY_RUN = False
+DRY_RUN = True
 ROOT_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Live2D"
 # .moc3 文件所在目录
 MOC3_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Live2D\Moc3"

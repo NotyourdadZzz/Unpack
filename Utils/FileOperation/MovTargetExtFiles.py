@@ -4,11 +4,11 @@ from pathlib import Path
 
 # ===== 配置 =====
 INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\res\raw-assets"  # 留空=当前目录
-OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Live2D\Textures"
+OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Textures"
 DRY_RUN = False
 
 extensions_to_move = [
-    '.webp',
+    '.pkm',
 ]
 
 

@@ -6,8 +6,32 @@ from typing import Tuple
 INPUT_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\res")
 OUTPUT_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\Live2D")
 
+DATA_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Zgirls3\res\Data")
 
 COMPRESS_JSON = True # 默认压缩motions json
+
+def build_moc3_index(data_path: Path) -> dict:
+    index = {}
+
+    for json_file in data_path.rglob("*.json"):
+        try:
+            with open(json_file, "r", encoding="utf-8") as f:
+                obj = json.load(f)
+
+            iterable = obj if isinstance(obj, list) else [obj]
+
+            for item in iterable:
+                if isinstance(item, dict):
+                    if item.get("__type__") == "cc.BufferAsset" and item.get("_native") == ".bin":
+                        name = item.get("_name", "")
+                        if "moc3" in name.lower():
+                            clean = name.replace("_moc3", "").replace(".moc3", "")
+                            index[json_file.stem] = clean
+
+        except OSError as e:
+            continue
+
+    return index
 # 头部6字节是 "live2d" 的 bin 文件 去掉头然后gzip解压就是 Live2D 的 .moc3 或者 .model3.json
 def is_live2d_moc(file_path: Path) -> bool:
     try:
@@ -141,6 +165,8 @@ def process_json(data: bytes) -> Tuple[bytes, str]:
 
 
 def main():
+    moc3_index = build_moc3_index(DATA_PATH)
+
     for file_path in INPUT_PATH.rglob("*"):
         if not file_path.is_file():
             continue
@@ -159,7 +185,12 @@ def main():
             stripped = data.lstrip()
 
             if data.startswith(b'MOC3'):
-                output_file = output_base.with_suffix(".moc3")
+                real_name = moc3_index.get(file_name)
+                if real_name:
+                    output_base = OUTPUT_PATH / real_name / real_name
+                    output_file = output_base.with_suffix(".moc3")
+                else:
+                    output_file = output_base.with_suffix(".moc3")
             elif stripped.startswith(b'{') or stripped.startswith(b'['):
                 data, model_name = process_json(data)
                 output_base = OUTPUT_PATH / model_name / model_name
