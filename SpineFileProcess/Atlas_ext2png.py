@@ -2,8 +2,8 @@ import re
 from pathlib import Path
 # 用来批量将 .atlas 文件中的 不规则扩展名替换为 .png
 
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\EpicSeven\portrait"
-_EXT = "sct"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Test"
+_EXT = "pvr.ccz|pvr|ccz|jpg|jpeg|bmp|tga|webp|astc"
 
 pattern = re.compile(
     rf'(\b[\w\-.]+)\.{_EXT}\b',
