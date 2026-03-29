@@ -1,5 +1,9 @@
 from pathlib import Path
 import subprocess
+
+target_dir = r'D:\Tools\UsefulTools\MuMu\Shared\Download\Output'
+
+
 # 直接调用了TexturePacker的命令行工具，不稳定（容易出现许可证水印），且效率很低下，不建议使用。
 def convert_and_cleanup(base_dir):
     base_path = Path(base_dir)
@@ -58,5 +62,4 @@ def convert_and_cleanup(base_dir):
     print(f"\n处理完成！成功: {success_count}, 失败: {fail_count}")
 
 if __name__ == "__main__":
-    target_dir = r'C:\Users\86182\Downloads\ss2'
     convert_and_cleanup(target_dir)
