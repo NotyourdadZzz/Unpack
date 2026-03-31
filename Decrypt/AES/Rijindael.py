@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import clr  # pythonnet  python <= 3.12
-
+# tips for me: conda activate py39
 clr.AddReference("System")
 from System.Security.Cryptography import Rijndael, PaddingMode, CryptoStream, CryptoStreamMode
 from System.IO import MemoryStream
