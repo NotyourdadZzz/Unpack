@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Set
 
 # === 配置 ===
-INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\Test"
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\IronSaga\Spine"
 
 DRYRUN = False   # True = 仅显示,不移动;False = 执行移动
 # ============

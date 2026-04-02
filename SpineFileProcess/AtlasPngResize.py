@@ -2,7 +2,7 @@ import os
 import re
 from PIL import Image
 
-INPUT_PATH = r""
+INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\IronSaga\test"
 
 # 作用： 根据 .atlas 文件中的 size 信息，检查对应的 .png 图片是否需要缩放，并使用最近邻算法进行缩放。
 def resize_image_nearest(image_path, new_size, output_path):

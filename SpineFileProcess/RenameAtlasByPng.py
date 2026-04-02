@@ -39,21 +39,25 @@ def is_spine_atlas(path: Path) -> tuple[bool, str | None]:
 
     return True, png_line
 
+def main():
+    for src in INPUT_DIR.rglob("*"):
+        if not src.is_file():
+            continue
 
-for src in INPUT_DIR.rglob("*"):
-    if not src.is_file():
-        continue
+        ok, png_name = is_spine_atlas(src)
+        if not ok:
+            continue
 
-    ok, png_name = is_spine_atlas(src)
-    if not ok:
-        continue
+        atlas_name = Path(png_name).stem + ".atlas"
+        atlas_path = src.with_name(atlas_name)
 
-    atlas_name = Path(png_name).stem + ".atlas"
-    atlas_path = src.with_name(atlas_name)
+        if atlas_path.exists():
+            print("SKIP (exists):", atlas_path.name)
+            continue
 
-    if atlas_path.exists():
-        print("SKIP (exists):", atlas_path.name)
-        continue
+        src.rename(atlas_path)
+        print("ATLAS:", src.name, "->", atlas_path.name)
 
-    src.rename(atlas_path)
-    print("ATLAS:", src.name, "->", atlas_path.name)
+if __name__ == "__main__":
+    main()
+

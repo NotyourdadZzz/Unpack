@@ -5,7 +5,7 @@ from collections import defaultdict
 # 搜索指定目录下的 Spine 模型文件，检查 atlas、骨骼文件和图片资源的完整性，并报告缺失或未使用的资源。
 
 # ================= 配置 =================
-ROOT_DIR = r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue\Output\actor\show"
+ROOT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Spine\IronSaga\Spine"
 
 ATLAS_EXT = ".atlas"
 SKEL_EXTS = {".skel", ".json"}   # 骨骼文件

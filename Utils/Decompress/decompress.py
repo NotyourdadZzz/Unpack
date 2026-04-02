@@ -4,7 +4,7 @@ import lzma
 from lz4.frame import decompress as dlz4frame
 from pathlib import Path
 
-TEST_FILE = r""
+TEST_FILE = r"D:\Tools\UsefulTools\MuMu\Shared\Download\IronSaga\Textures\bigMapComEtc\ex.image.beikasiyongzhuang.cet"
 # GZIP
 def is_gzip(data: bytes) -> bool:
     return data.startswith(b'\x1f\x8b\x08')
@@ -31,6 +31,9 @@ def gzip_decompress_data(compressed_data: bytes) -> bytes:
 
 # ZLIB
 def try_zlib(data: bytes) -> bytes:
+    if not data.startswith(b'\x78\xDA'):
+        print("Not zlib data")
+        return data
     try:
         return zlib.decompress(data)
     except OSError as e:
@@ -59,9 +62,8 @@ def try_lz4(data: bytes) -> bytes:
 def main():
     with open(TEST_FILE, 'rb') as f:
         data = f.read()
-
-    data = try_lz4(data)
-
+    print("Trying zlib...")
+    data = try_zlib(data)
     with open(TEST_FILE + ".decompressed", 'wb') as f:
         f.write(data)
 
