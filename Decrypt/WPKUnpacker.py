@@ -25,7 +25,7 @@ def unpack(wpk_path: Path, delete_source: bool):
     print(f"解压 → {wpk_path.name} (到 bc.exe 的默认路径)")
 
     try:
-        # 添加 creationflags=subprocess.CREATE_NO_WINDOW 以隐藏命令行窗口（原代码已有）
+        # 添加 creationflags=subprocess.CREATE_NO_WINDOW 以隐藏命令行窗口
         result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
         if result.returncode == 0:
             print(f"成功 → {wpk_path.name}")

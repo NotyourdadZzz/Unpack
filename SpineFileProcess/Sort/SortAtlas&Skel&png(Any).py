@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Set
 
 # === 配置 ===
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\IronSaga\Spine"
+INPUT_PATH = r"C:\Users\86182\Downloads\nv\assets\rawresources\prefab_uiplayermodel\playerspine"
 
 DRYRUN = False   # True = 仅显示,不移动;False = 执行移动
 # ============
@@ -69,7 +69,6 @@ def main():
                 else:
                     print(f"[WARN] atlas 引用的 png 缺失: {png_name}")
 
-    # ===== 无 atlas：兜底整理 =====
     else:
         print("[INFO] 根目录无 atlas，扫描子目录 atlas 进行归类")
 

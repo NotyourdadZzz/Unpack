@@ -6,10 +6,12 @@ from collections import defaultdict
 
 
 # ---------- Config ----------
-CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\gameBundle\cc.config.json")
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\gameBundle")
+CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\config.json")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\native")
 OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\Output")
 # --------------------------
+
+
 
 
 BASE64_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="

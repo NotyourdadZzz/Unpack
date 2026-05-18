@@ -1,6 +1,6 @@
 import json, pathlib
 
-INPUT_PATH = r"C:\Users\86182\Downloads\TEMP"
+INPUT_PATH = r"C:\Users\86182\Downloads\test\Moc3Json"
 def compress_json(json_str: str) -> str:
     data = json.loads(json_str)
     return json.dumps(data,separators=(",",":"))

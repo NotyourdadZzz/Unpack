@@ -3,7 +3,6 @@ import json
 import os
 import logging
 from pathlib import Path
-import sys
 
 
 class Moc3Extractor:
@@ -129,7 +128,7 @@ class Moc3Extractor:
 
             self.extracted_count += 1
             self.logger.info(
-                f"✅ 成功提取: {model_name} -> {character_dir.name}/{output_path.name} ({len(binary_data)} 字节)")
+                f"成功提取: {model_name} -> {character_dir.name}/{output_path.name} ({len(binary_data)} 字节)")
 
             return True
 
@@ -171,16 +170,16 @@ class Moc3Extractor:
 
     def batch_extract(self):
         """批量提取所有 moc3 文件"""
-        print(f"🚀 开始在当前目录搜索并提取 moc3 文件...")
-        print(f"📁 当前目录: {self.current_dir}")
-        print(f"💾 输出目录: {self.output_folder}")
+        print(f"开始在当前目录搜索并提取 moc3 文件...")
+        print(f"当前目录: {self.current_dir}")
+        print(f"输出目录: {self.output_folder}")
         print("-" * 60)
 
         # 查找目标文件
         json_files = self.find_json_files_with_bytes()
 
         if not json_files:
-            print("❌ 未找到包含 bytes 的 JSON 文件")
+            print("未找到包含 bytes 的 JSON 文件")
             print("请确保：")
             print("1. 脚本放在 AssetStudio 导出的文件夹中")
             print("2. 包含 .json 文件")
@@ -229,7 +228,7 @@ class Moc3Extractor:
 
 def main():
     """主函数"""
-    print("🎯 Live2D moc3 文件自动提取工具")
+    print("Live2D moc3 文件自动提取工具")
     print("=" * 50)
 
     # 询问输出目录
@@ -248,14 +247,14 @@ def main():
 
     # 显示总结
     print("\n" + "=" * 50)
-    print("🎉 提取完成!")
-    print(f"✅ 成功: {extractor.extracted_count} 个文件")
-    print(f"❌ 失败: {extractor.failed_count} 个文件")
-    print(f"💾 输出到: {output_folder}")
+    print("提取完成!")
+    print(f"成功: {extractor.extracted_count} 个文件")
+    print(f"失败: {extractor.failed_count} 个文件")
+    print(f"输出到: {output_folder}")
 
     # 显示生成的目录结构
     if extractor.extracted_count > 0:
-        print("\n📁 生成的目录结构:")
+        print("\n生成的目录结构:")
         character_dirs = [d for d in Path(output_folder).iterdir() if d.is_dir()]
         for character_dir in character_dirs:
             moc3_files = list(character_dir.glob("*.moc3"))

@@ -201,7 +201,6 @@ def get_target_image_size(path:Path, image_name: str) -> tuple[int,int]:
     print(f"Image {image_name} not found in {path}")
     return 0, 0
 
-
 def main():
     for file in Path(INPUT_PATH).rglob(f"*.{EXT}"):
         text = file.read_text(encoding="utf-8", errors="ignore")
@@ -213,6 +212,7 @@ def main():
         first_page = atlas_info.get_page_by_index(0)
         original_name = first_page.name
         reset_first_page_name(atlas_info)
+
         # 2.把所有的atlas的第一页的大小重置为输入目录下对应图片的大小
         target_size: tuple[int,int] = get_target_image_size(Path(INPUT_PATH), first_page.name)
         if target_size != (0, 0):

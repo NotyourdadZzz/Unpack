@@ -60,10 +60,12 @@ def compress(full_uuid):
     return compressed if len(parts) == 1 else f"{compressed}@{parts[1]}"
 
 if __name__ == '__main__':
+    # 压缩
+    uuid36 = "d038ec75-346e-40c7-8ee8-433114ce5ece"
+    print(f"压缩结果: {compress(uuid36)}")
+
     # 解压
-    uuid22 = "15alocojdEuoPKrUvUhTSQ"
+    uuid22 = "00C9f/xZ7HaxPE07ytJebS"
     print(f"解压结果: {decompress(uuid22)}")
 
-    # 压缩
-    uuid36 = "c56072d7-0787-406f-9f10-c7c7be8f9c88"
-    print(f"压缩结果: {compress(uuid36)}")
+

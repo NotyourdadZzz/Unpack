@@ -1,118 +1,81 @@
 import json
 from pathlib import Path
 
-# 自动根据现有motions textures physics重构/生成 model3配置
+INPUT_DIR = Path(r"C:\Users\86182\Downloads\test\Output")
 
-INPUT_DIR = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D"
 
 def main():
-    print("开始查找 Live2D 模型...")
+    processed = 0
 
-    # 使用 Path 更简洁地遍历所有 .moc3 文件
-    moc3_files = list(Path(INPUT_DIR).rglob('*.moc3'))
-    if not moc3_files:
-        print("未找到任何 .moc3 文件")
-        return
+    for moc3 in INPUT_DIR.rglob("*.moc3"):
+        model_dir = moc3.parent
+        model_name = moc3.stem
 
-    print(f"找到 {len(moc3_files)} 个 Live2D 模型")
-    processed = set()
-
-    for moc3_path in moc3_files:
-        model_dir = moc3_path.parent
-        if model_dir in processed:
-            continue
-
-        print(f"\n处理模型: {model_dir}")
-
-        # 1. 处理 motions 目录：自动添加 .json 后缀
-        motions_dir = model_dir / 'motions'
+        motions_dir = model_dir / "motions"
         if not motions_dir.exists():
-            print("  未找到 motions 目录，跳过")
             continue
 
-        motion_files = []
-        for motion_path in motions_dir.glob('*.motion3'):
-            new_path = motion_path.with_suffix('.motion3.json')
-            if not new_path.exists():
-                try:
-                    motion_path.rename(new_path)
-                    print(f"  重命名: {motion_path.name} → {new_path.name}")
-                except Exception as e:
-                    print(f"  重命名失败 {motion_path.name}: {e}")
-            motion_files.append(new_path.name)
+        print(f"\n处理: {model_dir}")
 
-        # 包含已存在的 .motion3.json
-        motion_files.extend([p.name for p in motions_dir.glob('*.motion3.json')])
-        motion_files = sorted(set(motion_files))  # 去重排序
+        # 重命名 *.motion3 -> *.motion3.json
+        for p in motions_dir.glob("*.motion3"):
+            try:
+                p.rename(p.with_suffix(".motion3.json"))
+            except Exception as e:
+                print(f"重命名失败 {p.name}: {e}")
 
+        motion_files = sorted({p.name for p in motions_dir.glob("*.motion3.json")})
         if not motion_files:
-            print("  未找到任何 .motion3.json 动作文件")
             continue
 
-        print(f"  发现 {len(motion_files)} 个动作:")
-        for f in motion_files[:10]:  # 只显示前10个，避免刷屏
-            print(f"    - {f}")
-        if len(motion_files) > 10:
-            print(f"    ... 共 {len(motion_files)} 个")
+        textures = sorted(
+            f"textures/{p.name}"
+            for p in (model_dir / "textures").glob("*.png")
+        ) if (model_dir / "textures").exists() else []
 
-        # 2. 获取模型名称
-        model_name = moc3_path.stem
+        physics = f"{model_name}.physics3.json"
+        if not (model_dir / physics).exists():
+            physics = None
 
-        # 3. 自动收集资源
-        textures = [f"textures/{p.name}" for p in (model_dir / 'textures').glob('*.png')] if (model_dir / 'textures').exists() else []
-        physics_path = model_dir / f"{model_name}.physics3.json"
-        physics = f"{model_name}.physics3.json" if physics_path.exists() else None
-
-        # 4. 构建 Motions 结构
-        motions_data = {
-            f.removesuffix('.motion3.json').removesuffix('.json'): [{"File": f"motions/{f}"}]
-            for f in motion_files
+        motions = {
+            p.removesuffix(".motion3.json"): [
+                {"File": f"motions/{p}"}
+            ]
+            for p in motion_files
         }
 
-        # 5. 读取或创建 .model3.json
-        model_json_path = model_dir / f"{model_name}.model3.json"
-        if model_json_path.exists():
-            with open(model_json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            print(f"  更新现有 {model_json_path.name}")
-        else:
-            print(f"  创建新的 {model_json_path.name}")
-            data = {
-                "Version": 3,
-                "Name": model_name,
-                "FileReferences": {
-                    "Moc": f"{model_name}.moc3",
-                    "Textures": [],
-                    "Physics": None,
-                    "Pose": None,
-                    "DisplayInfo": None,
-                    "Motions": {},
-                    "Expressions": []
-                },
-                "Groups": [
-                    {"Target": "Parameter", "Name": "EyeBlink", "Ids": ["ParamEyeROpen", "ParamEyeLOpen"]},
-                    {"Target": "Parameter", "Name": "LipSync", "Ids": ["ParamMouthForm", "ParamMouthOpenY"]}
-                ]
+        model3 = model_dir / f"{model_name}.model3.json"
+
+        data = {
+            "Version": 3,
+            "Name": model_name,
+            "FileReferences": {
+                "Moc": f"{model_name}.moc3",
+                "Textures": textures,
+                "Physics": physics,
+                "Motions": motions
             }
+        }
 
-        file_refs = data.setdefault("FileReferences", {})
-        file_refs["Textures"] = textures
-        if physics:
-            file_refs["Physics"] = physics
-        file_refs["Motions"] = motions_data
+        # 保留已有配置
+        if model3.exists():
+            try:
+                old = json.loads(model3.read_text(encoding="utf-8"))
+                old.setdefault("FileReferences", {}).update(data["FileReferences"])
+                data = old
+            except Exception as e:
+                print(f"读取已有配置失败 {model3.name}: {e}")
 
-        # 6. 写回
-        try:
-            with open(model_json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            print(f"  已保存: {model_json_path.name}")
-            print(f"  更新动作组: {', '.join(motions_data.keys())}")
-        except Exception as e:
-            print(f"  保存失败: {e}")
+        model3.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
 
-        processed.add(model_dir)
+        # print(f"保存: {model3.name}")
+        processed += 1
 
-    print(f"\n完成！共处理 {len(processed)} 个模型")
+    print(f"\n完成，共处理 {processed} 个模型")
+
 
 if __name__ == "__main__":
     main()

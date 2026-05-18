@@ -3,7 +3,7 @@
 # 得到【表情】默认 @4106.motion3.json 
 # 每个模型都有一个 .fadeMotionList文件，通过 
 # "CubismFadeMotionObjects" > "m_PathID" 来区分该fade动作属于哪个模型
-
+# 根据经验来看这个键 "CubismFadeMotionObjects" 不是固定的, 还见过 "motionsData"
 import os
 import json
 import re
@@ -11,8 +11,10 @@ import shutil
 
 INPUT_PATH = r"C:\Users\86182\Downloads\OUTPUT"
 OUTPUT_PATH = r"C:\Users\86182\Downloads\output"
-DRY_RUN = False
+FADE_KEY = "motionsData" # 根据实际情况修改为正确的键名
 
+
+DRY_RUN = False
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 def extract_model_name(filename):
@@ -70,9 +72,9 @@ def process_fade_motion_lists():
             continue
         
         # 提取所有 m_PathID
-        fade_objects = fade_data.get("CubismFadeMotionObjects", [])
+        fade_objects = fade_data.get(FADE_KEY, [])
         if not fade_objects:
-            print(f"未找到 CubismFadeMotionObjects")
+            print(f"未找到 {FADE_KEY} 键或列表为空")
             continue
         
         path_ids = [str(obj.get("m_PathID")) for obj in fade_objects if obj.get("m_PathID")]

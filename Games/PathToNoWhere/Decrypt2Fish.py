@@ -1,6 +1,11 @@
 from twofish import Twofish
 import os
+# conda activate py39
 # 解密 无期迷途 资产清单文件twofish加密
+key = b"D(G+KbPeShVmYq3t"
+INPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\res_hero_name.json"
+OUTPUT_PATH = r"D:\Tools\UsefulTools\MuMu\Shared\Download\hero_name.json"
+
 
 def pkcs7_pad(data, block_size=16):
     """PKCS7 填充"""
@@ -58,11 +63,10 @@ def process_file(in_path, out_path, key_bytes, encrypt=False):
     print(f"处理完成: {in_path} -> {out_path}")
 
 if __name__ == "__main__":
-    key = b"D(G+KbPeShVmYq3t"
-    
+
     process_file(
-        r"res_audio_classify.json",
-        r"audio.json",
+        INPUT_PATH,
+        OUTPUT_PATH,
         key,
         encrypt=False
     )

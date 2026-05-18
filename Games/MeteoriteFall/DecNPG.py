@@ -49,7 +49,6 @@ for root, dirs, files in os.walk(INPUT_DIR):
             skip += 1
             continue
 
-        # 检测是否为 NPG 加密文件，跳过正常 PNG
         if not is_npg(raw):
             print(f"  [SKIP] {src_path}  (非NPG，已跳过)")
             skip += 1

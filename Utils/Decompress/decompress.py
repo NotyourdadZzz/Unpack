@@ -1,10 +1,11 @@
 import gzip
 import zlib
 import lzma
+import brotli
 from lz4.frame import decompress as dlz4frame
 from pathlib import Path
 
-TEST_FILE = r"D:\Tools\UsefulTools\MuMu\Shared\Download\IronSaga\Textures\bigMapComEtc\ex.image.beikasiyongzhuang.cet"
+TEST_FILE = r"C:\Users\86182\Downloads\HOTD.wasm.unityweb"
 # GZIP
 def is_gzip(data: bytes) -> bool:
     return data.startswith(b'\x1f\x8b\x08')
@@ -59,11 +60,26 @@ def try_lz4(data: bytes) -> bytes:
         print("Not LZ4 data")
     return data
 
+
+# brotli
+def try_brotli(data: bytes) -> bytes:
+    try:
+        return brotli.decompress(data)
+    except ImportError:
+        print("Brotli library not installed")
+        return data
+    except Exception as e:
+        print(f"Error decompressing Brotli data: {e}")
+        return data
+
+
 def main():
     with open(TEST_FILE, 'rb') as f:
         data = f.read()
-    print("Trying zlib...")
-    data = try_zlib(data)
+    # print("Trying zlib...")
+    # data = try_zlib(data)
+    data = try_brotli(data)
+
     with open(TEST_FILE + ".decompressed", 'wb') as f:
         f.write(data)
 
