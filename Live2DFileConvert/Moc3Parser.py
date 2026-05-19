@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 
 
-INPUT_MOC3 = r"C:\Users\86182\Downloads\test\Output\Atlant_3\Atlant_3.moc3"
+INPUT_MOC3 = r"C:\Users\86182\Downloads\test\Output\Yao_4\Yao_4.moc3"
 
 os.add_dll_directory(
     r"D:\SteamLibrary\steamapps\common\Live2DViewerEX\bin\lw\lw_Data\Plugins\x86_64"
@@ -17,18 +17,27 @@ def init_live2d_core():
     c_void_p = ctypes.c_void_p
     c_int = ctypes.c_int
     c_char_p = ctypes.c_char_p
+
     core.csmReviveMocInPlace.argtypes = [ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint32]
     core.csmReviveMocInPlace.restype = c_void_p
+
     core.csmGetSizeofModel.argtypes = [c_void_p]
     core.csmGetSizeofModel.restype = ctypes.c_uint32
+
     core.csmInitializeModelInPlace.argtypes = [c_void_p, c_void_p, ctypes.c_uint32]
     core.csmInitializeModelInPlace.restype = c_void_p
+
     core.csmGetParameterCount.argtypes = [c_void_p]
     core.csmGetParameterCount.restype = c_int
     core.csmGetParameterIds.argtypes = [c_void_p]
     core.csmGetParameterIds.restype = ctypes.POINTER(c_char_p)
 
-def extract_param_ids(moc3_path) -> list[str]:
+    core.csmGetPartCount.argtypes = [c_void_p]
+    core.csmGetPartCount.restype = c_int
+    core.csmGetPartIds.argtypes = [c_void_p]
+    core.csmGetPartIds.restype = ctypes.POINTER(c_char_p)
+
+def extract_ids(moc3_path):
     if not Path(moc3_path).exists():
         raise FileNotFoundError(f"文件不存在: {moc3_path}")
 
@@ -66,21 +75,35 @@ def extract_param_ids(moc3_path) -> list[str]:
     if not model:
         raise RuntimeError("Model init failed")
 
-    count = core.csmGetParameterCount(model)
-    ids_ptr = core.csmGetParameterIds(model)
+    param_count = core.csmGetParameterCount(model)
+    param_ids_ptr = core.csmGetParameterIds(model)
+
+    part_count = core.csmGetPartCount(model)
+    part_ids_ptr = core.csmGetPartIds(model)
 
     params = []
-    for i in range(count):
+    for i in range(param_count):
         params.append(
-            ctypes.string_at(ids_ptr[i]).decode("utf-8")
+            ctypes.string_at(param_ids_ptr[i]).decode("utf-8")
         )
-    return params
+
+    parts = []
+    for i in range(part_count):
+        parts.append(
+            ctypes.string_at(part_ids_ptr[i]).decode("utf-8")
+        )
+
+    return params, parts
 
 def main():
     init_live2d_core()
-    ids = extract_param_ids(INPUT_MOC3)
-    print(f"参数数量: {len(ids)}")
-    print(ids)
+    param_ids, part_ids = extract_ids(INPUT_MOC3)
+
+    print(f"{len(param_ids)} Parameter IDs:")
+    print(param_ids)
+
+    print(f"\n{len(part_ids)} Part IDs:")
+    print(part_ids)
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,10 @@
 # fade 之前的 "ParameterIdHashes" 被改为 "ControlIds", 正好解决了之前 hash 无法还原为参数名的问题
 # 目前猜测这里的 ControlIds 可能是索引, 然后通过参数列表还原为参数名
 # 不过之前恰好做过解析 moc3 得到参数列表的工作
+# https://github.com/aelurum/AssetStudio/blob/AssetStudioMod/AssetStudioUtility/CubismLive2DExtractor/Live2DExtractor.cs
+# https://github.com/aelurum/AssetStudio/blob/AssetStudioMod/AssetStudioUtility/CubismLive2DExtractor/CubismMotion3Json.cs#L101
 import ctypes
+import math
 from pathlib import Path
 import os
 import json
@@ -70,24 +73,33 @@ def json2moc3(path: str, output: str):
             print(f"[FAIL] {json_file}: {e}")
     print(f"\n导出 {count} 个 moc3")
 
-
+# https://docs.live2d.com/wp-content/uploads/2018/06/NativeCoreAPIReference_r2.pdf
 def init_live2d_core():
     # initialize function signatures
     c_void_p = ctypes.c_void_p
     c_int = ctypes.c_int
     c_char_p = ctypes.c_char_p
+
     core.csmReviveMocInPlace.argtypes = [ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint32]
     core.csmReviveMocInPlace.restype = c_void_p
+
     core.csmGetSizeofModel.argtypes = [c_void_p]
     core.csmGetSizeofModel.restype = ctypes.c_uint32
+
     core.csmInitializeModelInPlace.argtypes = [c_void_p, c_void_p, ctypes.c_uint32]
     core.csmInitializeModelInPlace.restype = c_void_p
+
     core.csmGetParameterCount.argtypes = [c_void_p]
     core.csmGetParameterCount.restype = c_int
     core.csmGetParameterIds.argtypes = [c_void_p]
     core.csmGetParameterIds.restype = ctypes.POINTER(c_char_p)
 
-def extract_param_ids(moc3_path) -> list[str]:
+    core.csmGetPartCount.argtypes = [c_void_p]
+    core.csmGetPartCount.restype = c_int
+    core.csmGetPartIds.argtypes = [c_void_p]
+    core.csmGetPartIds.restype = ctypes.POINTER(c_char_p)
+
+def extract_params_parts(moc3_path) -> tuple[list[str], list[str]]:
     # 粗略的解析方案, 需要手动对齐内存地址
     if not Path(moc3_path).exists():
         raise FileNotFoundError(f"文件不存在: {moc3_path}")
@@ -126,29 +138,190 @@ def extract_param_ids(moc3_path) -> list[str]:
     if not model:
         raise RuntimeError("Model init failed")
 
-    count = core.csmGetParameterCount(model)
-    ids_ptr = core.csmGetParameterIds(model)
+    param_count = core.csmGetParameterCount(model)
+    param_ids_ptr = core.csmGetParameterIds(model)
 
-    params = []
-    for i in range(count):
-        params.append(
-            ctypes.string_at(ids_ptr[i]).decode("utf-8")
-        )
-    return params
+    part_count = core.csmGetPartCount(model)
+    part_ids_ptr = core.csmGetPartIds(model)
 
-def convert_segments(curve):
+    param_ids = []
+    for i in range(param_count):
+        param_ids.append(ctypes.string_at(param_ids_ptr[i]).decode("utf-8"))
+
+    part_ids = []
+    for i in range(part_count):
+        part_ids.append(ctypes.string_at(part_ids_ptr[i]).decode("utf-8"))
+
+    return param_ids, part_ids
+
+def convert_segments(curve, force_bezier=True):
     """
-    每个点依次写入 [time, value, weightedMode]，最后移除末尾 weightedMode。
-    输出长度为 3*n-1（n>=1），空曲线输出空列表。
+    Unity Keyframe -> Live2D motion3 Segments
     """
+    if not curve:
+        return []
+
     segments = []
-    for pt in curve:
-        segments.append(pt.get("time", 0))
-        segments.append(pt.get("value", 0))
-        segments.append(pt.get("weightedMode", 0))
-    if segments:
-        segments.pop()
+
+    # 第一个点直接写入
+    first = curve[0]
+    segments.append(first.get("time", 0.0))
+    segments.append(first.get("value", 0.0))
+
+    j = 1
+
+    while j < len(curve):
+        cur = curve[j]
+        prev = curve[j - 1]
+        next_curve = curve[j + 1] if j + 1 < len(curve) else None
+
+        cur_time = float(cur.get("time", 0.0))
+        cur_value = float(cur.get("value", 0.0))
+
+        prev_time = float(prev.get("time", 0.0))
+        prev_value = float(prev.get("value", 0.0))
+
+        in_slope = cur.get("inSlope", 0.0)
+        out_slope = prev.get("outSlope", 0.0)
+
+        # 字符串 Infinity -> float
+        if isinstance(in_slope, str):
+            if in_slope == "Infinity":
+                in_slope = math.inf
+            else:
+                in_slope = float(in_slope)
+
+        if isinstance(out_slope, str):
+            if out_slope == "Infinity":
+                out_slope = math.inf
+            else:
+                out_slope = float(out_slope)
+
+        in_slope = float(in_slope)
+        out_slope = float(out_slope)
+
+        # --------------------------------------------------
+        # InverseStepped
+        # --------------------------------------------------
+
+        if (
+            abs(cur_time - prev_time - 0.01) < 0.0001
+            and next_curve is not None
+            and float(next_curve.get("value", 0.0)) == cur_value
+        ):
+            segments.append(3)
+
+            segments.append(float(next_curve.get("time", 0.0)))
+            segments.append(float(next_curve.get("value", 0.0)))
+
+            j += 2
+            continue
+
+        # --------------------------------------------------
+        # Stepped
+        # --------------------------------------------------
+
+        if math.isinf(in_slope) and in_slope > 0:
+            segments.append(2)
+
+            segments.append(cur_time)
+            segments.append(cur_value)
+
+            j += 1
+            continue
+
+        # --------------------------------------------------
+        # Linear
+        # --------------------------------------------------
+
+        if (
+            out_slope == 0.0
+            and abs(in_slope) < 0.0001
+            and not force_bezier
+        ):
+            segments.append(0)
+
+            segments.append(cur_time)
+            segments.append(cur_value)
+
+            j += 1
+            continue
+
+        # --------------------------------------------------
+        # Bezier
+        # --------------------------------------------------
+
+        tangent_length = (cur_time - prev_time) / 3.0
+
+        cx1 = prev_time + tangent_length
+        cy1 = out_slope * tangent_length + prev_value
+
+        cx2 = cur_time - tangent_length
+        cy2 = cur_value - in_slope * tangent_length
+
+        segments.append(1)
+
+        segments.append(cx1)
+        segments.append(cy1)
+
+        segments.append(cx2)
+        segments.append(cy2)
+
+        segments.append(cur_time)
+        segments.append(cur_value)
+
+        j += 1
+
     return segments
+
+
+def count_segments_from_segments(segments: list) -> int:
+    """
+    Count logical segments from a motion3 `Segments` array.
+    """
+    if not segments:
+        return 0
+    # pos = 0
+    # first two entries are initial time/value
+    pos = 2
+    cnt = 0
+    L = len(segments)
+    while pos < L:
+        seg_type = int(segments[pos])
+        if seg_type == 0 or seg_type == 2 or seg_type == 3:
+            # linear / stepped / inverse-stepped consume 3 entries (type,time,value)
+            pos += 3
+            cnt += 1
+        elif seg_type == 1:
+            # bezier consumes 7 entries (type, cx1, cy1, cx2, cy2, time, value)
+            pos += 7
+            cnt += 1
+        else:
+            # unknown, break to avoid infinite loop
+            break
+    return cnt
+
+def count_points_from_segments(segments: list) -> int:
+    """
+    Count logical points from motion3 Segments.
+    """
+    if not segments:
+        return 0
+    cnt = 1  # 初始点
+    pos = 2
+    L = len(segments)
+    while pos < L:
+        seg_type = int(segments[pos])
+        if seg_type in (0, 2, 3):
+            cnt += 1
+            pos += 3
+        elif seg_type == 1:
+            cnt += 3
+            pos += 7
+        else:
+            break
+    return cnt
+
 
 def fade2json(path: str, output: str):
     # 1. 依次读取 {model_name}.fadeMotionList 文件, 根据其中的 "motionsData" > "m_PathID" 生成一个字典 dict[pathID] = model_name
@@ -159,7 +332,8 @@ def fade2json(path: str, output: str):
 
     id_model_cache: dict[str, str] = {} # dict[pathID] = model_name
 
-    for fml in input_dir.glob("*.fadeMotionList*.json"):
+    fmls = list(input_dir.glob("*.fadeMotionList @*.json"))
+    for fml in fmls:
         try:
             with open(fml, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -176,23 +350,28 @@ def fade2json(path: str, output: str):
             print(f"[FAIL] {fml}: {e}")
 
     # 2. 预加载所有 moc3 参数, 避免重复解析 moc3 文件, 生成一个字典 dict[model_name] = params_list
-    moc3_params_cache: dict[str, list[str]] = {}
+    moc3_params_parts_cache: dict[str, tuple[list[str], list[str]]] = {} # dict[model_name] = (param_ids, part_ids)
     model_names = set(id_model_cache.values())
     for name in model_names:
         try:
             moc3_file = output_dir / name / f"{name}.moc3"
             if not moc3_file.exists():
                 raise FileNotFoundError(f"moc3 文件不存在: {moc3_file}")
-            params = extract_param_ids(moc3_file)
+            params, parts = extract_params_parts(moc3_file)
+
             if not params:
-                raise ValueError("参数列表为空")
-            moc3_params_cache[name] = params
+                raise ValueError("未提取到参数列表")
+            if not parts:
+                raise ValueError("未提取到部件列表")
+
+            moc3_params_parts_cache[name] = (params, parts)
         except Exception as e:
             print(f"[FAIL] moc3 preload {name}: {e}")
 
     # 3. 解析 FADE_PATH 下的所有 {motion_name}.fade @{pathID}.json, 根据其中的 ControlIds 列表和 moc3 中的参数列表还原出参数名, 转换为 .motion3.json
     # 根据这个字典找到对应的模型名, 输出为 OUTPUT_PATH\{model_name}\motions\{motion_name}.motion3.json
-    for fade in input_dir.glob("*.fade *.json"):
+    fades = list(input_dir.glob("*.fade @*.json"))
+    for fade in fades:
         try:
             with open(fade, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -202,25 +381,36 @@ def fade2json(path: str, output: str):
             control_ids = data.get("ControlIds", [])
             curves = data.get("ControlTracks", [])
             motion_name = str(data.get("m_Name")).split(".")[0]
+
             if len(control_ids) == 0 or len(curves) == 0:
-                # print(f"[WARN] ControlIds 或 ControlTracks 为空, 已跳过 {fade}")
+                print(f"[WARN] ControlIds 或 ControlTracks 为空, 已跳过 {fade}")
                 continue
 
             path_id = fade.stem.split("@")[-1].strip()
             model_name = id_model_cache.get(path_id)
-            params = moc3_params_cache.get(model_name)
-            if not params:
-                raise ValueError(f"未找到 moc3 参数缓存: {model_name}")
+            params_parts_tuple = moc3_params_parts_cache.get(model_name)
 
-            param_ids = []
+            if not params_parts_tuple:
+                raise ValueError(f"未找到 moc3 参数缓存: {model_name}")
+            else:
+                params, parts = params_parts_tuple
+
+
+
+            # build mapping for each control id -> (target, id)
+            control_map: list[tuple[str, str] | None] = []
             for idx in control_ids:
+                idx = int(idx)
                 if idx < len(params):
-                    param_ids.append(params[idx])
+                    control_map.append(("Parameter", params[idx]))
                 else:
-                    # 经过测试发现, 这里会存在索引越界的情况, 是因为某些 ControlIds 的值不合法, 我的猜测是用来填充空白帧, 让参数数量和曲线数量对齐
-                    # 所以这里不需要进行异常处理, 直接跳过
-                    pass
-                    # raise IndexError(f"ControlIds 中的索引 {idx} 超出参数列表长度 {len(params)}  MOC3: {model_name}.moc3")
+                    part_idx = idx - len(params)
+                    if part_idx < len(parts):
+                        control_map.append(("PartOpacity", parts[part_idx]))
+                    else:
+                        # unknown id, append None to keep indices aligned
+                        print(f"[WARN] ControlId {idx} out of range for model {model_name}")
+                        control_map.append(None)
 
             # 构建 motion3.json
             motion3_json = {
@@ -233,43 +423,53 @@ def fade2json(path: str, output: str):
                     "CurveCount": 0,
                     "TotalSegmentCount": 0,
                     "TotalPointCount": 0,
-                    "UserDataCount": 1,
+                    "UserDataCount": 0,
                     "TotalUserDataSize": 0
                 },
                 "Curves": [],
-                "UserData": [{"Time": 0.0, "Value": ""}]
+                "UserData": []
             }
             total_segment_count = 0
-            max_time = 0.0
+            total_point_count = 0
+            duration = float(data.get("MotionLength", 0.0))
 
             for i, curve_obj in enumerate(curves):
                 curve = curve_obj.get("m_Curve", [])
-                segments = convert_segments(curve)
-                total_segment_count += len(curve_obj.get("m_Curve", [])) # 1
-                if curve:
-                    max_time = max(max_time, curve[-1].get("time", 0))
-                if i >= len(param_ids):
-                    # 原理同上, 如果索引越界, 说明曲线数量超过了参数数量, 直接break, 后续的曲线选择忽略
-                    # raise IndexError(f"ControlIds 中的索引 {i} 超出参数列表长度 {len(param_ids)}")
-                    # print(f"[WARN] 曲线数量超过参数数量, 已忽略后续曲线 MOC3: {model_name}.moc3  Motion: {motion_name}.motion3.json")
-                    break
-                motion3_json["Curves"].append({
-                    "Target": "Parameter",
-                    "Id": param_ids[i],
-                    "Segments": segments
-                })
 
-            motion3_json["Meta"]["CurveCount"] = len(param_ids)
-            motion3_json["Meta"]["Duration"] = max_time
+                segments = convert_segments(curve)
+
+                seg_cnt = count_segments_from_segments(segments)
+                total_segment_count += seg_cnt
+                point_cnt = count_points_from_segments(segments)
+                total_point_count += point_cnt
+
+
+                # map control -> curve by index
+                if i < len(control_map) and control_map[i] is not None:
+                    target, cid = control_map[i]
+                    motion3_json["Curves"].append({
+                        "Target": target,
+                        "Id": cid,
+                        "Segments": segments
+                    })
+                else:
+                    # no mapping for this curve; skip
+                    print(f"[WARN] no control mapping for curve index {i} in {fade}")
+                    continue
+
+
+
+            motion3_json["Meta"]["CurveCount"] = len(motion3_json["Curves"]) 
+            motion3_json["Meta"]["Duration"] = duration
             motion3_json["Meta"]["TotalSegmentCount"] = total_segment_count
-            motion3_json["Meta"]["TotalPointCount"] = len(param_ids) + total_segment_count
+            motion3_json["Meta"]["TotalPointCount"] = len(motion3_json["Curves"]) + total_segment_count
 
             out_path = output_dir / model_name / "motions" / f"{motion_name}.motion3.json"
             out_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(motion3_json, f, ensure_ascii=False, indent=4)
-            # print(f"[OK] {fade} -> {out_path}")
+            print(f"[OK] {fade} -> {out_path}")
 
         except Exception as e:
             print(f"[FAIL] {fade}: {e}")
@@ -399,7 +599,7 @@ def main():
 
     # 1. 将 MOC3_JSON_PATH 目录下的 json 文件转换为 moc3 文件
     # 输出为 OUTPUT_PATH\{model_name}\{model_name}.moc3
-    json2moc3(MOC3_JSON_PATH, OUTPUT_PATH)
+    # json2moc3(MOC3_JSON_PATH, OUTPUT_PATH)
 
     # 2. 将 FADE_PATH 目录下的 {motion_name}.fade @{pathID}.json 文件转换为 .motion3.json 文件
     # 输出为 OUTPUT_PATH\{model_name}\motions\{motion_name}.motion3.json
@@ -408,7 +608,7 @@ def main():
     # 3. 根据 TEXTURES_META_PATH 目录下的 .dat 文件解析出纹理对应的模型信息,
     # 然后将 TEXTURES_PATH 目录下的纹理文件移动到 OUTPUT_PATH\{model_name}\textures\ 目录下
     # 并重命名为 {texture_name}_{resolution}.png
-    sort_textures_by_meta(TEXTURES_META_PATH, TEXTURES_PATH, OUTPUT_PATH)
+    # sort_textures_by_meta(TEXTURES_META_PATH, TEXTURES_PATH, OUTPUT_PATH)
 
 if __name__ == "__main__":
     main()

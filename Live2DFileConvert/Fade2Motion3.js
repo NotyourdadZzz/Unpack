@@ -8,7 +8,8 @@ function processFadeFiles(dirPath) {
         const stat = fs.statSync(filePath);
         if (stat.isDirectory()) {
             processFadeFiles(filePath);
-        } else if (file.endsWith('.fade.json')) {
+        }
+        else if (file.endsWith('.fade.json')) {
             const fileName = path.basename(file, '.fade.json');
             const data = fs.readFileSync(filePath, 'utf8');
             const obj = JSON.parse(data);
@@ -58,7 +59,8 @@ function processFadeFiles(dirPath) {
             motion3Json.Meta.TotalPointCount = obj.ParameterIds.length + TotalSegmentCount
             fs.writeFileSync(path.join(dirPath, `${fileName}.motion3.json`), JSON.stringify(motion3Json, '\t'));
             console.log(path.join(dirPath, `${fileName}.motion3.json`) + "已生成");
-        } else if (file.endsWith('CubismPhysicsController.json')) {
+        }
+        else if (file.endsWith('CubismPhysicsController.json')) {
             const data = fs.readFileSync(filePath, 'utf8');
             const obj = JSON.parse(data);
             let physicsJson = {
