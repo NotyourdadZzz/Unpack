@@ -599,7 +599,7 @@ def main():
 
     # 1. 将 MOC3_JSON_PATH 目录下的 json 文件转换为 moc3 文件
     # 输出为 OUTPUT_PATH\{model_name}\{model_name}.moc3
-    # json2moc3(MOC3_JSON_PATH, OUTPUT_PATH)
+    json2moc3(MOC3_JSON_PATH, OUTPUT_PATH)
 
     # 2. 将 FADE_PATH 目录下的 {motion_name}.fade @{pathID}.json 文件转换为 .motion3.json 文件
     # 输出为 OUTPUT_PATH\{model_name}\motions\{motion_name}.motion3.json
@@ -608,7 +608,7 @@ def main():
     # 3. 根据 TEXTURES_META_PATH 目录下的 .dat 文件解析出纹理对应的模型信息,
     # 然后将 TEXTURES_PATH 目录下的纹理文件移动到 OUTPUT_PATH\{model_name}\textures\ 目录下
     # 并重命名为 {texture_name}_{resolution}.png
-    # sort_textures_by_meta(TEXTURES_META_PATH, TEXTURES_PATH, OUTPUT_PATH)
+    sort_textures_by_meta(TEXTURES_META_PATH, TEXTURES_PATH, OUTPUT_PATH)
 
 if __name__ == "__main__":
     main()
