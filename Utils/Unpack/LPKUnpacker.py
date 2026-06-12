@@ -37,9 +37,9 @@ def genkey(s: str) -> int:
 
 def decrypt(key: int, data: bytes) -> bytes:
     ret = []
-    for slice in [data[i:i+1024] for i in range(0, len(data), 1024)]:
+    for s in [data[i:i+1024] for i in range(0, len(data), 1024)]:
         tmpkey = key
-        for i in slice:
+        for i in s:
             tmpkey = (65535 & 2531011 + 214013 * tmpkey >> 16) & 0xffffffff
             ret.append((tmpkey & 0xff) ^ i)
     return bytes(ret)
@@ -50,9 +50,9 @@ def is_encrypted_file(s: str) -> bool:
         return False
     return match_rule.fullmatch(s) is not None
 
-def find_encrypted_file(s: str) -> str:
+def find_encrypted_file(s: str) -> str|None:
     files = re.findall(match_rule, s)
-    if files == []:
+    if not files:
         return None
     return files[0]
 
@@ -102,7 +102,7 @@ filetype.add_type(Moc())
 
 def guess_type(data: bytes):
     ftype = filetype.guess(data)
-    if ftype != None:
+    if ftype:
         return "." + ftype.extension
     try:
         json.loads(data.decode("utf8"))

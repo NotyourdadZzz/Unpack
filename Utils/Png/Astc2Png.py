@@ -7,7 +7,7 @@ import gzip, io, zlib
 # astc: 解 gzip / ccz → beeplay → astcenc → png（原地）
 
 # ===== 固定参数 =====
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\NvWuShenQiYue")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Yujian\Output\qe\spine\skeleton\monster\120000")
 
 # 如果只是普通的 astc 文件, 下面的参数无影响, 会自动跳过
 SIGNATURE = b"beeplay"

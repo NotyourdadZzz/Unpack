@@ -6,9 +6,9 @@ from collections import defaultdict
 
 
 # ---------- Config ----------
-CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\config.json")
-INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\native")
-OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\new\Output")
+CONFIG_PATH = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Yujian\resources\config.json")
+INPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Yujian\resources\native")
+OUTPUT_DIR = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Yujian\Output")
 # --------------------------
 
 
@@ -100,7 +100,7 @@ def main():
         dst_file.parent.mkdir(parents=True, exist_ok=True)
 
         # 移动最大文件
-        print(f"[KEEP] {best_src} -> {dst_file}")
+        print(f"[MOVE] {best_src} -> {dst_file}")
         shutil.move(best_src, dst_file)
 
         # 删除其余文件

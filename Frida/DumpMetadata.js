@@ -1,7 +1,11 @@
-//frida -Uf jp.glee.girl -l DumpMetadata.js
+// frida -Uf jp.glee.girl -l DumpMetadata.js // Android
+// frida -f ".\*.exe" -l DumpMetadata.js // PC
+
 // 这个还挺好用 jp.glee.girl 是包名 -U 是连接 USB 设备 -f 是启动应用 -n 是附加到正在运行的应用 -l 是加载脚本
 // 如果成功导出, 数据会在 "/storage/emulated/0/Download/global-metadata.dat"
-var save_path = "/storage/emulated/0/Download/global-metadata.dat";
+// var save_path = "/storage/emulated/0/Download/global-metadata.dat"; // Android
+var save_path = "C:\\Users\\86182\\Downloads\\SKETCHY MASSAGE-2.0\\Photo\\Dump";
+
 var dumped = false;
 function guess_metadata_size(base, rangeSize) {
     var sanity = Memory.readU32(base);
@@ -69,6 +73,7 @@ function dump_metadata(pattern) {
             });
         });
     });
+    console.log("scan done");
 }
 
 setTimeout(function () {

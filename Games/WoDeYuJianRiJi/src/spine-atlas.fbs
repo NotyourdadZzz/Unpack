@@ -1,0 +1,30 @@
+table Frame {
+    name: string;
+    rotate: uint16;
+    x: uint16;
+    y: uint16;
+    offx: uint16;
+    offy: uint16;
+    width: uint16;
+    height: uint16;
+    orig_width: uint16;
+    orig_height: uint16;
+}
+
+table Atlas {
+    frames: [Frame];
+    name: string;
+    unknown_1: uint32;
+    width: uint16;
+    height: uint16;
+    unknown_2: uint32;
+    unknown_3: uint32;
+    unknown_4: bool;
+}
+
+table SpineAtlas {
+    atlas: [Atlas];
+    index: [uint16];
+}
+
+root_type SpineAtlas;

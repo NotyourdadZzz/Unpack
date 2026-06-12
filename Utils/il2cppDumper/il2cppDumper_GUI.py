@@ -12,6 +12,10 @@ IL2CPP_DUMPER_EXE = os.path.abspath(r"D:\Tools\ReverseTools\Il2CppDumper-win-v6.
 class Il2CppDumperGUI(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.log = None
+        self.out_entry = None
+        self.meta_entry = None
+        self.exe_entry = None
         self.title("Il2CppDumper GUI")
         self.geometry("720x420")
         self.resizable(True, True)
