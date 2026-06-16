@@ -4,7 +4,7 @@
  * Use of this source code is governed by the Live2D Open Software license
  * that can be found at https://www.live2d.com/eula/live2d-open-software-license-agreement_en.html.
  */
-
+// https://github.com/Live2D/CubismUnityComponents/blob/develop/Assets/Live2D/Cubism/Framework/Json/CubismMotion3Json.cs
 
 using System;
 using System.Collections.Generic;

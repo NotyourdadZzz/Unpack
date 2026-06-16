@@ -1,32 +1,135 @@
+import math
 import os
 import json
 import re
 from pathlib import Path
-
+# 尚处于测试阶段, 备份数据, 自行测试 2026.6.15
+# // https://live2dhub.com/t/topic/2636/54
 INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Test"
 OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Output"
 
+
 FADE_REGEX = re.compile(r'.*\.fade(\s*[#@]-?\d+)?\.json$')  # 匹配 .fade.json 或 .fade @xxxx.json 或 .fade #xxxx.json
-IsHash = False
 os.makedirs(OUTPUT_PATH, exist_ok=True)
-
-
-def convert_segments(curve):
+def convert_segments(curve, force_bezier=True):
     """
-    每个点依次写入 [time, value, weightedMode]，最后移除末尾 weightedMode。
-    输出长度为 3*n-1（n>=1），空曲线输出空列表。
+    Unity Keyframe -> Live2D motion3 Segments
     """
+    if not curve:
+        return []
+
     segments = []
-    for pt in curve:
-        segments.append(pt.get("time", 0))
-        segments.append(pt.get("value", 0))
-        segments.append(pt.get("weightedMode", 0))
 
-    if segments:
-        segments.pop()
+    # 第一个点直接写入
+    first = curve[0]
+    segments.append(first.get("time", 0.0))
+    segments.append(first.get("value", 0.0))
+
+    j = 1
+
+    while j < len(curve):
+        cur = curve[j]
+        prev = curve[j - 1]
+        next_curve = curve[j + 1] if j + 1 < len(curve) else None
+
+        cur_time = float(cur.get("time", 0.0))
+        cur_value = float(cur.get("value", 0.0))
+
+        prev_time = float(prev.get("time", 0.0))
+        prev_value = float(prev.get("value", 0.0))
+
+        in_slope = cur.get("inSlope", 0.0)
+        out_slope = prev.get("outSlope", 0.0)
+
+        # 字符串 Infinity -> float
+        if isinstance(in_slope, str):
+            if in_slope == "Infinity":
+                in_slope = math.inf
+            else:
+                in_slope = float(in_slope)
+
+        if isinstance(out_slope, str):
+            if out_slope == "Infinity":
+                out_slope = math.inf
+            else:
+                out_slope = float(out_slope)
+
+        in_slope = float(in_slope)
+        out_slope = float(out_slope)
+
+        # --------------------------------------------------
+        # InverseStepped
+        # --------------------------------------------------
+
+        if (
+            abs(cur_time - prev_time - 0.01) < 0.0001
+            and next_curve is not None
+            and float(next_curve.get("value", 0.0)) == cur_value
+        ):
+            segments.append(3)
+
+            segments.append(float(next_curve.get("time", 0.0)))
+            segments.append(float(next_curve.get("value", 0.0)))
+
+            j += 2
+            continue
+
+        # --------------------------------------------------
+        # Stepped
+        # --------------------------------------------------
+
+        if math.isinf(in_slope) and in_slope > 0:
+            segments.append(2)
+
+            segments.append(cur_time)
+            segments.append(cur_value)
+
+            j += 1
+            continue
+
+        # --------------------------------------------------
+        # Linear
+        # --------------------------------------------------
+
+        if (
+            out_slope == 0.0
+            and abs(in_slope) < 0.0001
+            and not force_bezier
+        ):
+            segments.append(0)
+
+            segments.append(cur_time)
+            segments.append(cur_value)
+
+            j += 1
+            continue
+
+        # --------------------------------------------------
+        # Bezier
+        # --------------------------------------------------
+
+        tangent_length = (cur_time - prev_time) / 3.0
+
+        cx1 = prev_time + tangent_length
+        cy1 = out_slope * tangent_length + prev_value
+
+        cx2 = cur_time - tangent_length
+        cy2 = cur_value - in_slope * tangent_length
+
+        segments.append(1)
+
+        segments.append(cx1)
+        segments.append(cy1)
+
+        segments.append(cx2)
+        segments.append(cy2)
+
+        segments.append(cur_time)
+        segments.append(cur_value)
+
+        j += 1
 
     return segments
-
 
 def build_output_path(output_root, obj, fallback_file_name):
     motion_name = str(obj.get("MotionName", "")).strip()
@@ -68,7 +171,7 @@ def process_fade_files(dir_path):
 
             total_segment_count = 0
             max_time = 0.0
-            param_ids = obj.get("ParameterIdHashes") if IsHash else obj.get("ParameterIds", [])
+            param_ids = obj.get("ParameterIds", [])
 
             for i, curve_obj in enumerate(obj.get("ParameterCurves", [])):
                 curve = curve_obj.get("m_Curve", [])

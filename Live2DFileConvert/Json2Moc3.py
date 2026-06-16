@@ -3,7 +3,7 @@ import json
 import os
 import logging
 from pathlib import Path
-
+# // https://live2dhub.com/t/topic/2636/54
 
 class Moc3Extractor:
     def __init__(self, output_folder=None):

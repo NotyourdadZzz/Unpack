@@ -1,3 +1,4 @@
+// https://live2dhub.com/t/topic/2636/54
 const fs = require('fs');
 const path = require('path');
 // 将指定目录下的所有.fade.json文件转换为.motion3.json文件，并将CubismPhysicsController.json转换为l2d.physics3.json
