@@ -91,7 +91,7 @@ def fix_in_place(file_path: Path, make_backup: bool) -> bool:
 
 
 def main(make_backup: bool):
-    root = Path("..")
+    root = Path("../Del")
     exts = {".unitypackage", ".asset", ".bundle", ".ab", ".assets",
             ".ress", ".resource", ".res", ".bin", ".dat", ".bytes",
             ".decrypted", ""}
@@ -99,29 +99,15 @@ def main(make_backup: bool):
     targets = [p for p in root.rglob("*") if p.is_file() and (
                p.suffix.lower() in exts or p.suffix == "")]
 
-    print(f"🔍 扫描到 {len(targets)} 个可能文件，开始处理...\n")
+    print(f"扫描到 {len(targets)} 个可能文件，开始处理...\n")
 
     fixed_count = 0
     for p in targets:
         if fix_in_place(p, make_backup=make_backup):
             fixed_count += 1
 
-    print(f"\n✅ 完成！共修复 {fixed_count} 个文件")
+    print(f"\n完成！共修复 {fixed_count} 个文件")
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Unity FakeHeader 一键直接覆盖修复工具")
-    parser.add_argument("-d", "--dry-run", action="store_true", help="仅检测，不实际修改文件")
-    parser.add_argument("-b", "--backup", action="store_true", help="生成 .bak 备份（默认不备份，直接覆盖）")
-    args = parser.parse_args()
-
-    if args.dry_run:
-        print("🧪 干运行模式：只检测不修改\n")
-        main(make_backup=None)        # None 代表 dry-run
-    else:
-        if args.backup:
-            print("💾 将为每个修复的文件生成 .bak 备份\n")
-        else:
-            print("⚠️  默认直接覆盖原文件，不生成备份！（使用 -b 可启用备份）\n")
-        main(make_backup=args.backup)
+    main(make_backup=False)  # False 表示直接覆盖修复，True 表示备份后修复

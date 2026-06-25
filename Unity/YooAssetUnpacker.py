@@ -1,4 +1,3 @@
-import io
 import os
 import sys
 import shutil
@@ -675,11 +674,7 @@ def extract_hotfix_assets(root_path: Path, bytes_files: List[Path], output_dir: 
 
 def main():
 
-    if len(sys.argv) != 2:
-        print("用法: python Extract.py 输入目录")
-        sys.exit(1)
-
-    input_path = Path(sys.argv[1])
+    input_path = Path(r"D:\Tools\UsefulTools\MuMu\Shared\Download\Last")
 
     if not input_path.exists() or not input_path.is_dir():
         print(f"错误: 输入目录 '{input_path}' 不存在或不是目录")
