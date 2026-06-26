@@ -1,15 +1,20 @@
 import os
 import json
-import yaml
 from pathlib import Path
+import yaml
+try:
+    from yaml import CLoader as Loader
+except:
+    from yaml import SafeLoader as Loader
 # https://live2dhub.com/t/topic/6089/10?u=twistzz
 # 尚处于测试阶段, 备份数据, 自行测试 2026.6.15
-# 需要能够导出 yaml 格式的 AnimationClip 数据(有些版本的AS无法导出yaml格式的, 比如MOD, 但是Raz可以), 同时其中的 path 需要以 Parameters/ 或 Parts/ 开头
+# 需要能够导出 yaml 格式的 AnimationClip 数据(有些版本的AS无法导出yaml格式的, 比如MOD不行, 但是Raz可以)
+# 同时其中的 path 需要以 Parameters/ 或 Parts/ 开头
 def close(a, b):
     return abs(a - b) < 1e-5
 def ignore_unknown(loader, tag_suffix, node):
     return loader.construct_mapping(node)
-yaml.add_multi_constructor('',ignore_unknown,Loader=yaml.SafeLoader)
+Loader.add_multi_constructor('',ignore_unknown)
 
 
 class KeyFrame:
@@ -32,7 +37,7 @@ def load_anim(path: str) -> dict:
             f"File not found: {path}"
         )
     with open(path,"r",encoding="utf-8") as f:
-        return yaml.load(f,Loader=yaml.SafeLoader)
+        return yaml.load(f, Loader=Loader)
 
 def read_curves(anim: dict) -> list[tuple[str,list[KeyFrame]]]:
     curves: list[tuple[str,list[KeyFrame]]] = []
@@ -147,9 +152,9 @@ def convert(anim_file: str, out_dir: str):
 
 def main():
     anim_path = Path(r"C:\Users\86182\Downloads\TEMP\AnimationClip")
-    output_dir = Path(r"C:\Users\86182\Downloads\TEMP\out")
+    output_dir = Path(r"C:\Users\86182\Downloads\TEMP\out1")
 
-    for file in anim_path.rglob("*.txt"):
+    for file in anim_path.rglob("*.anim"):
         print(f"[+] converting {file}")
         convert(
             str(file),

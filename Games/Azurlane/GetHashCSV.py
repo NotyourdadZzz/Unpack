@@ -4,6 +4,7 @@ import os
 import requests
 from datetime import datetime
 import re
+# https://line3-patch-blhx.bilibiligame.net/android/resource/{MD5}
 
 BASE_URL = "https://line3-patch-blhx.bilibiligame.net/android/hash/"
 OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Spine\Azurlane\LocalAssetsList"
