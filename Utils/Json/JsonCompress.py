@@ -1,6 +1,6 @@
 import json, pathlib
 
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\PathToNowhere (WuQiMiTu)\Models\live2d\characters"
+INPUT_PATH = r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Moc3"
 def compress_json(json_str: str) -> str:
     data = json.loads(json_str)
     return json.dumps(data,separators=(",",":"))
