@@ -1,16 +1,18 @@
 import csv
 import os
 # 你的 CSV 目录 会搜索这个目录下的所有csv文件
-input_dir = r"D:\Games\GameUnpackAssets\mymodel\Spine\Azurlane\LocalAssetsList"
-# 把碧蓝航线的csv文件的每一个条目按照文件名字典序排序 
+input_dir = r"D:\Games\GameUnpackAssets\mymodel\Spine\Azurlane\LocalAssetsList\2026-06-26"
+# 把碧蓝航线的live2d csv文件的每一个条目按照文件名字典序排序
 def sort_key(row):
-    return row[0].split("/", 1)[1]
+    return row[0].split("/", 1)[-1]
 
 if __name__ == "__main__":
     for filename in os.listdir(input_dir):
         if not filename.lower().endswith(".csv"):
             continue
-
+        if not filename.lower().startswith("$l2d"):
+            continue
+        print(f"处理: {filename}")
         input_path = os.path.join(input_dir, filename)
 
         with open(input_path, newline='', encoding='utf-8') as f:

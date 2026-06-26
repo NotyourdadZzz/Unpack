@@ -4,7 +4,7 @@ import simplejson as json
 import numpy as np
 
 #卡厄思梦境 (Chaos Zero Nightmare) scsp 3.8.99 to spine skeleton json
-
+# https://live2dhub.com/t/topic/5686/3
 class ScspOffsets:
     HEADER_WIDTH        = 22
     HEADER_HEIGHT       = 26
