@@ -8,10 +8,10 @@ import os
 import json
 import re
 import shutil
-
-INPUT_PATH = r"C:\Users\86182\Downloads\OUTPUT"
-OUTPUT_PATH = r"C:\Users\86182\Downloads\output"
-FADE_KEY = "motionsData" # 根据实际情况修改为正确的键名
+# 使用前需要先把 .fade 文件转为 .motion3.json 文件, 通过 Fade2Motion.py 转换
+INPUT_PATH = r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Motion"
+OUTPUT_PATH = r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Moc3_Output"
+FADE_KEY = "CubismFadeMotionObjects" # 根据实际情况修改为正确的键名(motionsList中记录所有动作信息pathId的键)
 
 
 DRY_RUN = False
@@ -64,6 +64,7 @@ def process_fade_motion_lists():
         
         # 读取 fadeMotionList 文件
         fade_file_path = os.path.join(INPUT_PATH, fade_file)
+        print(f"读取: {fade_file_path}")
         try:
             with open(fade_file_path, 'r', encoding='utf-8') as f:
                 fade_data = json.load(f)
@@ -78,7 +79,7 @@ def process_fade_motion_lists():
             continue
         
         path_ids = [str(obj.get("m_PathID")) for obj in fade_objects if obj.get("m_PathID")]
-        
+        print(f"找到 {len(path_ids)} 个 PathID")
         # 创建目标目录
         target_dir = os.path.join(OUTPUT_PATH, model_name, "motions")
         if not DRY_RUN:

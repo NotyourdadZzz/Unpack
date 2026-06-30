@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-INPUT_DIR = Path(r"C:\Users\86182\Downloads\test\Output")
+INPUT_DIR = Path(r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Moc3_Output")
 
 
 def main():

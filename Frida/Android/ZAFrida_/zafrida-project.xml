@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zafridaProject version="1" name="ZAFrida_" platform="ANDROID" mainScript="ZAFrida_.js" attachScript="" spawnMode="true" extraArgs="" targetManual="true" processScope="RUNNING_APPS" connectionMode="USB" remoteHost="127.0.0.1" remotePort="16384" />
+

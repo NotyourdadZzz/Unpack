@@ -1,5 +1,6 @@
 adb forward tcp:27042 tcp:27042 # 端口转发, 安装frida用的
-
+adb forward tcp:23946 tcp:23946 # 端口转发, IDA
+magisk resetprop ro.debuggable 1 # 设置系统属性为可调试
 ## 模拟器
 adb connect 127.0.0.1:16384;adb root;adb shell
 adb shell ps -A # 查看模拟器进程

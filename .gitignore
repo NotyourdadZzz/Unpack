@@ -34,6 +34,8 @@ ENV/
 *.swp
 *.swo
 *~
+.zafrida
+zafrida-logs
 
 # Game Assets
 *.ab
@@ -58,3 +60,4 @@ temp/
 test/
 node_modules/
 /SpineFileProcess/Converter/Data
+

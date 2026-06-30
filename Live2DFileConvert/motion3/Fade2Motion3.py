@@ -5,8 +5,8 @@ import re
 from pathlib import Path
 # 尚处于测试阶段, 备份数据, 自行测试 2026.6.15
 # // https://live2dhub.com/t/topic/2636/54
-INPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Test"
-OUTPUT_PATH = r"D:\Games\GameUnpackAssets\mymodel\Live2D\SteamGame\MorningMist\Live2D\Output"
+INPUT_PATH = r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Fade"
+OUTPUT_PATH = r"C:\Users\86182\Downloads\SKETCHY MASSAGE-2.0\Photo\Fade"
 
 
 FADE_REGEX = re.compile(r'.*\.fade(\s*[#@]-?\d+)?\.json$')  # 匹配 .fade.json 或 .fade @xxxx.json 或 .fade #xxxx.json
@@ -132,6 +132,7 @@ def convert_segments(curve, force_bezier=True):
     return segments
 
 def build_output_path(output_root, obj, fallback_file_name):
+    # 如果 MotionName 存在, 则使用 MotionName 作为输出路径
     motion_name = str(obj.get("MotionName", "")).strip()
     if motion_name:
         motion_name = motion_name.replace("\\", "/").lstrip("/")
