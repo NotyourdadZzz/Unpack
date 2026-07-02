@@ -6,15 +6,17 @@ try:
     from yaml import CLoader as Loader
 except:
     from yaml import SafeLoader as Loader
-# https://live2dhub.com/t/topic/6089/10?u=twistzz
-# 尚处于测试阶段, 备份数据, 自行测试 2026.6.15
-# 需要能够导出 yaml 格式的 AnimationClip 数据(有些版本的AS无法导出yaml格式的, 比如MOD不行, 但是Raz可以)
-# 同时其中的 path 需要以 Parameters/ 或 Parts/ 开头
+
+# 需要能够导出 yaml 格式的 AnimationClip 数据
+# path 需要以 Parameters/ 或 Parts/ 开头
+
 def close(a, b):
     return abs(a - b) < 1e-5
+
 def ignore_unknown(loader, tag_suffix, node):
     return loader.construct_mapping(node)
-Loader.add_multi_constructor('',ignore_unknown)
+
+Loader.add_multi_constructor('', ignore_unknown)
 
 
 class KeyFrame:
@@ -36,11 +38,11 @@ def load_anim(path: str) -> dict:
         raise FileNotFoundError(
             f"File not found: {path}"
         )
-    with open(path,"r",encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return yaml.load(f, Loader=Loader)
 
-def read_curves(anim: dict) -> list[tuple[str,list[KeyFrame]]]:
-    curves: list[tuple[str,list[KeyFrame]]] = []
+def read_curves(anim: dict) -> list[tuple[str, list[KeyFrame]]]:
+    curves: list[tuple[str, list[KeyFrame]]] = []
     for fc in anim["AnimationClip"]["m_FloatCurves"]:
         path = fc.get("path")
         if not path:
@@ -52,13 +54,13 @@ def read_curves(anim: dict) -> list[tuple[str,list[KeyFrame]]]:
                 KeyFrame(
                     k["time"],
                     k["value"],
-                    k.get("inSlope",0)
-                    if isinstance(k.get("inSlope"),int|float) else 0,
-                    k.get("outSlope",0)
-                    if isinstance(k.get("outSlope"),int|float) else 0
+                    k.get("inSlope", 0)
+                    if isinstance(k.get("inSlope"), int | float) else 0,
+                    k.get("outSlope", 0)
+                    if isinstance(k.get("outSlope"), int | float) else 0
                 )
             )
-        curve = (path,frames)
+        curve = (path, frames)
         curves.append(curve)
 
     return curves
@@ -67,31 +69,31 @@ def curve_to_segments(frames):
     if not frames:
         return []
 
-    result=[frames[0].time,frames[0].value]
+    result = [frames[0].time, frames[0].value]
 
-    for i in range(1,len(frames)):
+    for i in range(1, len(frames)):
 
-        prev=frames[i-1]
-        cur=frames[i]
-        dt=cur.time - prev.time
+        prev = frames[i-1]
+        cur = frames[i]
+        dt = cur.time - prev.time
 
         # Linear
         if dt:
-            slope=(cur.value-prev.value)/dt
-            if close(prev.out_tangent,slope) and close(cur.in_tangent,slope):
-                result += [0,cur.time,cur.value]
+            slope = (cur.value - prev.value) / dt
+            if close(prev.out_tangent, slope) and close(cur.in_tangent, slope):
+                result += [0, cur.time, cur.value]
                 continue
 
         # Bezier
-        length=abs(dt)/3
-        c1x=prev.time + length
-        c1y=prev.value + prev.out_tangent*length
-        c2x=cur.time - length
-        c2y=cur.value - cur.in_tangent*length
+        length = abs(dt) / 3
+        c1x = prev.time + length
+        c1y = prev.value + prev.out_tangent * length
+        c2x = cur.time - length
+        c2y = cur.value - cur.in_tangent * length
         result += [
             1,
-            c1x,c1y,
-            c2x,c2y,
+            c1x, c1y,
+            c2x, c2y,
             cur.time,
             cur.value
         ]
@@ -107,10 +109,10 @@ def convert(anim_file: str, out_dir: str):
     clip = data["AnimationClip"]
     stop = clip["m_AnimationClipSettings"]["m_StopTime"]
     start = clip["m_AnimationClipSettings"]["m_StartTime"]
-    duration= stop - start
+    duration = stop - start
 
-    curves=[]
-    for path,frames in read_curves(data):
+    curves = []
+    for path, frames in read_curves(data):
         curve_id = path.split("/")[-1]
         if path.startswith("Parameters/"):
             curve_target = "Parameter"
@@ -122,37 +124,39 @@ def convert(anim_file: str, out_dir: str):
             {
                 "Target": curve_target,
                 "Id": curve_id,
-                "Segments":
-                    curve_to_segments(frames)
+                "Segments": curve_to_segments(frames)
             }
         )
 
-    motion={
-        "Version":3,
-        "Meta":
-        {
-            "Duration":duration,
-            "Fps":30.0,
-            "FadeInTime":0.5,
-            "FadeOutTime":0.5,
-            "Loop":True,
-            "AreBeziersRestricted":True
+    motion = {
+        "Version": 3,
+        "Meta": {
+            "Duration": duration,
+            "Fps": 30.0,
+            "FadeInTime": 0.5,
+            "FadeOutTime": 0.5,
+            "Loop": True,
+            "AreBeziersRestricted": True
         },
-        "Curves":curves
+        "Curves": curves
     }
 
     name = clip["m_Name"]
-
     out = os.path.join(out_dir, name + ".motion3.json")
 
-    with open(out,"w",encoding="utf-8") as f:
-        json.dump(motion,f,indent=2,ensure_ascii=False)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(motion, f, indent=2, ensure_ascii=False)
 
-    print("[OK]",out)
+    print("[OK]", out)
 
 def main():
-    anim_path = Path(r"C:\Users\86182\Downloads\TEMP\AnimationClip")
-    output_dir = Path(r"C:\Users\86182\Downloads\TEMP\out1")
+    # 获取脚本所在目录
+    script_dir = Path(__file__).resolve().parent
+    # 输入目录：脚本所在目录
+    anim_path = script_dir
+    # 输出目录：脚本同目录下的 motions 文件夹，不存在则创建
+    output_dir = script_dir / "motions"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for file in anim_path.rglob("*.anim"):
         print(f"[+] converting {file}")
@@ -161,5 +165,5 @@ def main():
             str(output_dir)
         )
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
